@@ -79,6 +79,12 @@ What this does and does not protect against:
   is therefore weaker against an attacker who moves the DEX *and* controls timing within the same block. The
   oracle value is what is used, so the attacker gains nothing by moving the DEX alone, it only makes the
   call revert. A time-weighted source can be plugged in by deploying another `IPriceSource`.
+- **Testnet price source.** The testnet deploy wraps the live Tigris MUSD/BTC volatile pool
+  `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9` (from the Tigris PoolFactory
+  `0x4947243CC818b627A5D06d14C4eCe7398A23Ce1A`, which reported 33 pools when checked). That pool held about 102.6M MUSD
+  and 1,303 BTC, a spot price near $78.7k against a Mezo oracle near $81.5k, so a gap of about 3.5% already exists on
+  testnet. The deploy therefore sets the limit to 10% (`DEVIATION_BPS=1000`) instead of the 5% default. No mock source
+  is used. On mainnet the limit should go back to something tight and the source should be time weighted.
 - The deployed deviation limit and thresholds are constructor values and cannot be changed afterwards.
 - Both prices are assumed to be MUSD per BTC with 18 decimals, and MUSD is treated as one dollar.
 
