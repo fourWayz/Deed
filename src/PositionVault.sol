@@ -86,6 +86,14 @@ contract PositionVault {
         emit CollateralAdded(msg.value);
     }
 
+    /// @notice Lets the venue that locked the Deed add collateral, so an auction can top the position up.
+    function topUpFromVenue(address upperHint, address lowerHint) external payable nonReentrant {
+        if (deed.lockedBy(tokenId) != msg.sender) revert NotController();
+        _requireOpen();
+        borrowerOps.addColl{value: msg.value}(upperHint, lowerHint);
+        emit CollateralAdded(msg.value);
+    }
+
     /// @notice Repay with MUSD pulled from the caller (needs allowance).
     function repay(uint256 amount, address upperHint, address lowerHint) external onlyController nonReentrant {
         _requireOpen();
