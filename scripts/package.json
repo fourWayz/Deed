@@ -1,0 +1,8 @@
+{
+  "name": "deed-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "viem": "^2.22.8"
+  }
+}
