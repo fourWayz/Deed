@@ -79,6 +79,23 @@ What this does and does not protect against:
   is therefore weaker against an attacker who moves the DEX *and* controls timing within the same block. The
   oracle value is what is used, so the attacker gains nothing by moving the DEX alone, it only makes the
   call revert. A time-weighted source can be plugged in by deploying another `IPriceSource`.
+- **What is priced from where.** Every number that decides money comes from the Mezo `PriceFeed`: the equity the
+  auction starts at (`equityOf`), the ICR used to open a rescue, the ICR the winner must reach, and the ICR re-check
+  on a market sale. The DEX is read through `IPriceSource.spotPrice()` in one place, `_oraclePrice()`, where it is
+  compared with the oracle value and the call reverts with `SpotDeviation` when they differ by more than
+  `maxDeviationBps`. Its value is never used in arithmetic. The live e2e run records the contract's `equityOf`
+  next to an oracle-based and a spot-based calculation, and the contract matches the oracle one.
+- **Why `DEVIATION_BPS=1000` is a testnet setting.** The testnet Tigris pool is not arbitraged against the oracle: at
+  deploy time it sat about 3.4% under it (spot near $78.7k, oracle near $81.4k) and the gap can move either way. With
+  the 5% default, a modest drift would make every bid and rescue start revert. 10% keeps the demo usable while
+  still catching a pool that is pushed far off (a 20% pump is rejected in `test_manipulatedSpot_blocksStart`).
+  It is a constructor value, so this deploy keeps it for good.
+- **What mainnet should use.** A liquid, arbitraged pool should track the oracle within well under 1%, so the limit
+  should be tight, around 100 to 200 bps, and the source should be a time weighted price (for example a TWAP over
+  several blocks from the pool's observations) instead of instant reserves, which a flash loan can move inside the
+  transaction. A wider limit gives an attacker room to start or win an auction on a distorted DEX state, while too
+  tight a limit pauses rescues whenever the pool lags. The limit and source should also be re-checked against
+  the pool's depth before each deployment.
 - **Testnet price source.** The testnet deploy wraps the live Tigris MUSD/BTC volatile pool
   `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9` (from the Tigris PoolFactory
   `0x4947243CC818b627A5D06d14C4eCe7398A23Ce1A`, which reported 33 pools when checked). That pool held about 102.6M MUSD
