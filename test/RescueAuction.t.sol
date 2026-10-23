@@ -411,6 +411,25 @@ contract RescueAuctionTest is AuctionBase {
         assertEq(deed.ownerOf(id), bob);
     }
 
+    function test_priceComesFromOracle_notFromSpot() public {
+        _setPrice(CRASH);
+        // DEX 4% off, inside the limit: it must not leak into any amount
+        spot.set(CRASH * 104 / 100);
+        (uint256 coll, uint256 debt) = vault.liveState();
+        uint256 oracleEquity = coll * CRASH / 1e18 - (debt - 200e18);
+        uint256 spotEquity = coll * (CRASH * 104 / 100) / 1e18 - (debt - 200e18);
+        assertTrue(oracleEquity != spotEquity);
+
+        assertEq(auction.equityOf(id), oracleEquity);
+        auction.startRescue(id);
+        (,,,, uint256 startPrice,) = auction.auctions(id);
+        assertEq(startPrice, oracleEquity);
+
+        // and the top-up needed is sized on the oracle too
+        uint256 expected = (SAFE_ICR * debt + CRASH - 1) / CRASH - coll;
+        assertEq(auction.requiredTopUp(id), expected);
+    }
+
     function testFuzz_deviationBoundary(uint256 gapBps) public {
         gapBps = bound(gapBps, 0, 2_000);
         _setPrice(CRASH);
