@@ -1,0 +1,75 @@
+{
+  "startedAt": "2026-10-23T20:13:29.794Z",
+  "wallets": {
+    "seller": "0x522bC0c3919fF823173ca4145feEcE905F772ffE",
+    "buyer": "0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6"
+  },
+  "prices": {
+    "oracle": "81273.86244",
+    "spot": "78686.462725728167282336"
+  },
+  "rescue": {
+    "deed": "2",
+    "before": {
+      "collateralBTC": "0.030926671269631068",
+      "debtMUSD": "2001.800164295398364201",
+      "icr": "125.56%",
+      "oraclePrice": "81273.6614"
+    },
+    "after": {
+      "collateralBTC": "0.037002628983671257",
+      "debtMUSD": "2001.800242319853958011",
+      "icr": "150.22%",
+      "oraclePrice": "81264.94985"
+    },
+    "startPrice": "710.732558551073289811",
+    "floorPrice": "355.366279275536644905",
+    "pricePaid": "705.105925795877292934",
+    "topUpBTC": "0.006075957714040189",
+    "sellerPayout": "704.990760797963924577",
+    "equityContract": "711.651361291844988026",
+    "equityOracleBased": "711.651361291844988026",
+    "equitySpotBased": "631.710199890239380364",
+    "newOwner": "0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6"
+  },
+  "txs": [
+    {
+      "who": "seller",
+      "label": "seller cannot touch the vault during the auction",
+      "hash": "0x51103bb98220997df5d7c38cc89abc4b9d61c181215250f1f4d210ae77f79224",
+      "status": "reverted",
+      "block": 16325362,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for auction",
+      "hash": "0xd344cda603fafe959289898a7588508dc03a7d63eb52a909307742d859913fdb",
+      "status": "success",
+      "block": 16325378
+    },
+    {
+      "who": "buyer",
+      "label": "buyer cannot win with a top-up that is too small",
+      "hash": "0x85634216ac18da6bbe98a065df60e7d7348f4873783316c60575ddc74015e56c",
+      "status": "reverted",
+      "block": 16325382,
+      "revertReason": "StillRisky"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer wins the auction and tops up in the same tx",
+      "hash": "0xbe346c7859b16b5a9eb70c1ec9a2fe7bb75290aff998857bdda418a20dff8fcf",
+      "status": "success",
+      "block": 16325385
+    },
+    {
+      "who": "seller",
+      "label": "seller claims the auction payout",
+      "hash": "0x051e01b100a0cc58e0c9955b7f115eb9d15f814c5fab1ede484cfa430b01bcca",
+      "status": "success",
+      "block": 16325392
+    }
+  ],
+  "finishedAt": "2026-10-23T20:15:56.457Z"
+}
