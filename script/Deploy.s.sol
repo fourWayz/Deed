@@ -26,7 +26,7 @@ contract Deploy is Script {
 
     function run() external {
         uint256 maxDeviationBps = vm.envOr("DEVIATION_BPS", DEFAULT_DEVIATION_BPS);
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast(_key());
 
         IPriceSource spot;
         address pair = vm.envOr("DEX_PAIR", address(0));
@@ -53,5 +53,13 @@ contract Deploy is Script {
         console.log("DeedMarket:", address(market));
         console.log("RescueAuction:", address(auction));
         console.log("SpotSource:", address(spot));
+    }
+
+    /// accepts the key with or without a 0x prefix
+    function _key() internal view returns (uint256) {
+        string memory raw = vm.envString("PRIVATE_KEY");
+        bytes memory b = bytes(raw);
+        bool prefixed = b.length > 1 && b[0] == "0" && (b[1] == "x" || b[1] == "X");
+        return vm.parseUint(prefixed ? raw : string.concat("0x", raw));
     }
 }
