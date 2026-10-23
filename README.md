@@ -61,16 +61,27 @@ Research on the MUSD contracts is in [docs/mezo-notes.md](docs/mezo-notes.md).
 
 ## Deployed addresses (Mezo testnet, chain id 31611)
 
-Not deployed yet. `script/Deploy.s.sol` needs a funded deployer key and a DEX price source, neither of which was
-available when this was written. After deploying, fill in this table.
+Deployed with `script/Deploy.s.sol` in one broadcast, `DeedNFT.init` included. Deploy transactions are in
+[docs/demo.md](docs/demo.md) and `deployments.json`.
 
 | Contract | Address |
 | --- | --- |
-| DeedNFT | _pending_ |
-| DeedFactory | _pending_ |
-| DeedMarket | _pending_ |
-| RescueAuction | _pending_ |
-| Price source | _pending_ |
+| DeedNFT | [`0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755`](https://explorer.test.mezo.org/address/0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755) |
+| DeedFactory | [`0x2928D2Dc566ec5f5D859F76B65CD829de5056d84`](https://explorer.test.mezo.org/address/0x2928D2Dc566ec5f5D859F76B65CD829de5056d84) |
+| DeedMarket | [`0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F`](https://explorer.test.mezo.org/address/0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F) |
+| RescueAuction | [`0x4CabFbD149cbC44a61aD574c1baE95c277Cb145B`](https://explorer.test.mezo.org/address/0x4CabFbD149cbC44a61aD574c1baE95c277Cb145B) |
+| PairSpotPrice (DEX guard) | [`0x699Ea2CE021B94FDD8f9E55e4bD12CBAA41e86e5`](https://explorer.test.mezo.org/address/0x699Ea2CE021B94FDD8f9E55e4bD12CBAA41e86e5) |
+
+The DEX guard reads the live Tigris MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9`. No mock price
+source is used. The deployed auction uses `rescueICR` 130%, `safeICR` 150% and a **10%** oracle/DEX limit, which is a testnet
+setting (see [docs/security.md](docs/security.md)).
+
+**Explorer verification: not done.** The five contracts were submitted to the Blockscout API
+(`https://api.explorer.test.mezo.org/api`) with `forge verify-contract` and as standard-JSON input. The API accepted the
+submissions and then answered `Fail - Unable to verify` for every contract. The deployed runtime bytecode equals the local
+build apart from the `deployer` immutable, and the metadata hash is identical, so this looks like the explorer's verifier,
+whose advertised EVM versions stop at `london` while the build uses `cancun` and `via_ir`. `scripts/verify.sh` repeats the
+submission. The addresses above are therefore **unverified** on the explorer.
 
 Existing MUSD testnet contracts used (checked on chain): MUSD `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`,
 BorrowerOperations `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5`, TroveManager `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0`,
@@ -78,11 +89,12 @@ PriceFeed `0x86bCF0841622a5dAC14A313a15f96A95421b9366`.
 
 ## Try it in 3 steps
 
-1. Deploy: `forge script script/Deploy.s.sol --rpc-url mezo_testnet --broadcast --private-key $DEPLOYER_KEY`
-   with `SPOT_SOURCE=<IPriceSource>` or `DEX_PAIR=<MUSD/BTC pair>` set. Put the printed addresses in
-   `frontend/.env.local`.
+1. The contracts are already deployed (table above). To deploy your own copy, copy `.env.example` to `.env`, fill in
+   `PRIVATE_KEY` and run `forge script script/Deploy.s.sol --rpc-url $MEZO_TESTNET_RPC --broadcast`, then put the printed
+   addresses in `frontend/.env.local` (see `frontend/.env.example`).
 2. Run the app: `cd frontend && npm install && npm run dev`, connect with Mezo Passport on testnet.
-3. Open a position, list it from one wallet and buy it from another. See [docs/demo.md](docs/demo.md).
+3. Open a position, list it from one wallet and buy it from another. See [docs/demo.md](docs/demo.md), which also holds
+   the hashes of a full live run (`node --env-file=.env scripts/e2e.mjs`).
 
 ## Develop
 
