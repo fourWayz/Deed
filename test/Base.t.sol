@@ -36,10 +36,15 @@ abstract contract Base is Test {
             IPriceFeed(address(mezo)),
             IMUSD(address(musd))
         );
-        deed.init(address(factory), venue, otherVenue);
+        _init();
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(mallory, 100 ether);
+    }
+
+    /// suites with real venues override this to register them
+    function _init() internal virtual {
+        deed.init(address(factory), venue, otherVenue);
     }
 
     function _open(address who, uint256 coll, uint256 debt) internal returns (uint256 id, PositionVault v) {
