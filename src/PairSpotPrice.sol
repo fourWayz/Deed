@@ -4,7 +4,8 @@ pragma solidity ^0.8.24;
 import {IPriceSource} from "./interfaces/IPriceSource.sol";
 
 interface IPair {
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    // Tigris (a Velodrome fork) returns uint256 for all three, a V2 pair's narrower types decode the same way
+    function getReserves() external view returns (uint256 reserve0, uint256 reserve1, uint256 blockTimestampLast);
     function token0() external view returns (address);
 }
 
@@ -21,8 +22,8 @@ contract PairSpotPrice is IPriceSource {
     }
 
     function spotPrice() external view returns (uint256) {
-        (uint112 r0, uint112 r1,) = pair.getReserves();
-        (uint256 musdReserve, uint256 btcReserve) = musdIsToken0 ? (uint256(r0), uint256(r1)) : (uint256(r1), uint256(r0));
+        (uint256 r0, uint256 r1,) = pair.getReserves();
+        (uint256 musdReserve, uint256 btcReserve) = musdIsToken0 ? (r0, r1) : (r1, r0);
         require(btcReserve > 0, "empty pool");
         return musdReserve * 1e18 / btcReserve;
     }
