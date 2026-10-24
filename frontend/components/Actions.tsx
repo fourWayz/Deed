@@ -104,7 +104,18 @@ export function BuyButton({ p, onDone }: { p: Position; onDone: () => void }) {
 
 // --- win a rescue auction ---
 
-export function BidButton({ p, safeICR, onDone }: { p: Position; safeICR: bigint; onDone: () => void }) {
+export function BidButton({
+  p,
+  safeICR,
+  paused,
+  onDone,
+}: {
+  p: Position;
+  safeICR: bigint;
+  /** the DEX price is outside the auction's limit, the contract would refuse */
+  paused?: boolean;
+  onDone: () => void;
+}) {
   const { address, client, write } = useWallet();
   const { state, run } = useTx(onDone);
   const a = p.auction!;
@@ -112,7 +123,7 @@ export function BidButton({ p, safeICR, onDone }: { p: Position; safeICR: bigint
     <TxButton
       label="Bid at current price"
       state={state}
-      disabled={!address || a.seller === address}
+      disabled={!address || a.seller === address || paused}
       onClick={() =>
         run(async (wait) => {
           const price = auctionPriceAt(a, Math.floor(Date.now() / 1000));
@@ -139,7 +150,7 @@ export function BidButton({ p, safeICR, onDone }: { p: Position; safeICR: bigint
   );
 }
 
-export function StartRescueButton({ p, onDone }: { p: Position; onDone: () => void }) {
+export function StartRescueButton({ p, paused, onDone }: { p: Position; paused?: boolean; onDone: () => void }) {
   const { address, write } = useWallet();
   const { state, run } = useTx(onDone);
   return (
@@ -147,7 +158,7 @@ export function StartRescueButton({ p, onDone }: { p: Position; onDone: () => vo
       label="Start rescue auction"
       variant="ghost"
       state={state}
-      disabled={!address}
+      disabled={!address || paused}
       onClick={() =>
         run(() => write({ address: ADDR.auction, abi: auctionAbi, functionName: "startRescue", args: [p.id] }))
       }
@@ -157,13 +168,24 @@ export function StartRescueButton({ p, onDone }: { p: Position; onDone: () => vo
 
 // --- manage a position you hold ---
 
-export function ManagePanel({ p, safeICR, onDone }: { p: Position; safeICR: bigint; onDone: () => void }) {
+export function ManagePanel({
+  p,
+  safeICR,
+  minFloorBps,
+  onDone,
+}: {
+  p: Position;
+  safeICR: bigint;
+  minFloorBps: bigint;
+  onDone: () => void;
+}) {
   const { address, client, write } = useWallet();
   const [amount, setAmount] = useState("");
   const [listPrice, setListPrice] = useState("");
   const [minICR, setMinICR] = useState("150");
   const [days, setDays] = useState("3");
-  const [floor, setFloor] = useState("50");
+  const minFloorPct = Number(minFloorBps) / 100;
+  const [floor, setFloor] = useState(String(minFloorPct));
   const [hours, setHours] = useState("12");
 
   const add = useTx(onDone);
@@ -175,6 +197,10 @@ export function ManagePanel({ p, safeICR, onDone }: { p: Position; safeICR: bigi
   const claim = useTx(onDone);
 
   const amt = parseAmount(amount);
+  const floorNum = Number(floor);
+  const hoursNum = Number(hours);
+  // the contract rejects anything else, so say it here instead of after a failed transaction
+  const auctionInputsOk = floorNum >= minFloorPct && floorNum <= 100 && hoursNum >= 1 && hoursNum <= 168;
   const locked = p.lockedBy !== "0x0000000000000000000000000000000000000000";
   const mine = address && p.owner.toLowerCase() === address.toLowerCase();
   if (!mine) return <div className="glass muted">Connect the wallet that holds this Deed to manage it.</div>;
@@ -327,7 +353,7 @@ export function ManagePanel({ p, safeICR, onDone }: { p: Position; safeICR: bigi
           <h2>Rescue auction</h2>
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
             <div>
-              <label>Floor (% of equity)</label>
+              <label>Floor (% of equity, {minFloorPct} to 100)</label>
               <input value={floor} onChange={(e) => setFloor(e.target.value)} inputMode="decimal" />
             </div>
             <div>
@@ -346,7 +372,7 @@ export function ManagePanel({ p, safeICR, onDone }: { p: Position; safeICR: bigi
             <TxButton
               label="Start auction"
               state={auction.state}
-              disabled={locked}
+              disabled={locked || !auctionInputsOk}
               onClick={() =>
                 auction.run(() =>
                   write({
@@ -361,6 +387,12 @@ export function ManagePanel({ p, safeICR, onDone }: { p: Position; safeICR: bigi
           )}
           <div className="muted" style={{ fontSize: 12.5 }}>
             The winner pays MUSD to you and tops the position up to {fmtPct(safeICR)} or more.
+            {!auctionInputsOk && (
+              <span style={{ color: "var(--bad)" }}>
+                {" "}
+                Floor must be {minFloorPct} to 100 and the duration 1 to 168 hours.
+              </span>
+            )}
           </div>
         </div>
       </div>

@@ -114,7 +114,7 @@ export default function PositionPage() {
             </div>
           )}
 
-          <ManagePanel p={p} safeICR={data.safeICR} onDone={refresh} />
+          <ManagePanel p={p} safeICR={data.safeICR} minFloorBps={data.minFloorBps} onDone={refresh} />
         </div>
       )}
     </>
