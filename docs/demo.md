@@ -30,10 +30,10 @@ price, then buy from B with the old page still open. The transaction reverts wit
 
 On testnet the BTC price can't be crashed on demand, so use one of these:
 
-- **Owner-started** (works any time): wallet B opens the Deed, "Rescue auction", floor 50%, 1 hour, Start.
-- **Public rescue** (needs a position under the rescue line, 130% in the default deploy): open a position near the
-  minimum collateral, for example `0.0225` BTC against `1800` MUSD at about 80k, and wait for the price to move,
-  or use the local fork test `RescueAuction.t.sol` which drives the price.
+- **Owner-started** (works any time): wallet B opens the Deed, "Rescue auction", floor 80% (the lowest allowed), 1 hour, Start.
+- **Public rescue** (needs a position under the public line, 120% in the deployed auction): open a position at about
+  117% ICR, for example `0.029` BTC against `1800` MUSD at about 80k (`scripts/e2e.mjs` does exactly this and then
+  rescues it), or use `RescueAuction.t.sol`, which drives the price.
 
 Then:
 
@@ -45,11 +45,89 @@ Then:
 
 ---
 
-# Live run on Mezo testnet
+# Live run on the second deployment
+
+Run with `scripts/e2e.mjs` against the contracts in `deployments.json` (london build, public rescue under 120%, floor 80%).
+Two wallets: seller `0x522bC0c3919fF823173ca4145feEcE905F772ffE`, buyer `0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6`. Raw data: `docs/e2e-results.json`.
+Reverted rows are real transactions sent with a fixed gas limit so the failure has a hash. Every hash is on
+`https://explorer.test.mezo.org/tx/<hash>`. The run passed on its first attempt, 31 transactions.
+
+Oracle 80684.75204, Tigris pool spot 78685.92.
+
+## Deploy
+
+| Step | Tx |
+| --- | --- |
+| PairSpotPrice | `0x4df74512cd9cfb4640c659df793b4ef37a04f5becc28d65f6b523b82a726855b` |
+| DeedNFT | `0x21117144244d548a8bd8bae169c7db1bb013e70fee2d6025ce25c095c9b8b472` |
+| DeedFactory | `0xa2e62948bc44f3a1fe6c02e9fce961947f454456440beaba183a013c6cf68be2` |
+| DeedMarket | `0x5f29d196a6d05f63071f920b6e404c6715b547d295d20ae33d15c03e6e375084` |
+| RescueAuction | `0x204c86713ea6f4cdff3381556dec1ef8c7706974c3ae3e6ee00fc607b450b74a` |
+| DeedNFT.init (same broadcast) | `0x0dd54e0f94e5e89959cecf85e2019c05757b7a7def971eb3d1e8257534a4cc04` |
+
+A second `init` reverts with `AlreadyInitialized` (`0x0dc149f0`), a stranger with `NotDeployer` (`0x8b906c97`), both checked with
+`eth_call` on the live contract. Auction settings read back from the chain: public start under 120%, safe ICR 150%, floor
+80% (`MIN_FLOOR_BPS` and `DEFAULT_FLOOR_BPS` both 8000), DEX limit 1000 bps.
+
+## Rescue auction numbers (Deed #2)
+
+| | Before the bid | After the bid |
+| --- | --- | --- |
+| Collateral | 0.029009747051688633 BTC | 0.037277837041676534 BTC |
+| Debt (principal + interest) | 2001.8 MUSD | 2001.80008753963310525 MUSD |
+| ICR | **116.99%** (public line 120%) | **150.33%** (safe line 150%) |
+| Oracle price | 80729.88558 | 80724.50318 |
+
+- Equity at the start: 539.93 MUSD, floor 431.95 MUSD, which is exactly 80%. The script asserts it.
+- The winner topped up 0.008268089989987901 BTC and paid 539.48 MUSD. The seller was paid 539.41 MUSD (the price had fallen a little more between quote and mining), matching the seller balance change exactly.
+- `equityOf` returned 540.154 MUSD, the oracle based figure is 540.154 and a spot based figure would be 480.859. The contract prices from the oracle.
+
+## All transactions
+
+| Result | Step | Tx |
+| --- | --- | --- |
+| ok | seller opens position A (market flow) | `0x65846d8d885c6ec9d1a68d6f8d512594fdab507b9db51bbd6755ea6381b67ca1` |
+| ok | seller sends 1000 MUSD to buyer | `0x0e03ae5fb7784c0caebc2780dbf15d88f0a2b39bf701de2dc737345eb09964ce` |
+| reverts `Healthy` | a stranger cannot start a public rescue on a healthy position (about 145%, the line is 120%) | `0x4bbce9f2719c8a415c8e871c24642e6f7b91f485617bc8e64e2a2b36c25ff0d5` |
+| reverts `BadParams` | the holder cannot start an auction with a floor under 80% of equity | `0x8d1f9ec1e0db036a9b5fd4142eaeb4bebf2705caca8a140417f5c25e6748ca95` |
+| ok | seller lists A with a 75s expiry | `0x8e9dcb3ab5b29b5dd031e545d7f393c38ef6ff0067a5f55e57faa48f22cf62ee` |
+| reverts `Locked` | seller cannot move a listed Deed | `0x12d7d9eea2c8981d1c046923b61bb555d21ac9a1e03378a2374eca367c47fafa` |
+| reverts `NotController` | seller cannot withdraw from a listed vault | `0x182ed57207400ec63d2d972acf66d6f1f3aed964a9154bfbdb99ed6807667658` |
+| ok | buyer approves MUSD for market | `0x9574e68ed24053cbb9eb1b4e64c1a22f0ea05160d5f1a9047334639501b0ff02` |
+| reverts `Expired` | buyer tries to buy an expired listing | `0xbc8a3d10966c752ba22e54d3bec894e48bf0add1522199fa3998d16293c18b8b` |
+| ok | buyer (a stranger) clears the expired listing | `0x609dad4b326512aafb9028150a7404316c7242d5a9ce2b0ce0871c00f0e548aa` |
+| ok | seller lists A again (1 day) | `0xaeef28233d90de1b6fbfb73ce7acf77db33d46bceb42e8648bad88e7233ed558` |
+| reverts `NotSeller` | buyer cannot cancel someone else's live listing | `0x75e028a21b759542cc6dd23a054b346e48255f95f616038ef820565f810595af` |
+| ok | seller cancels the listing | `0x0bf3e6b49d7d16a41b44cb32042a9f3760830ab6c31e36c6ed8c6f6d6143409b` |
+| reverts `NotListed` | buyer cannot buy a cancelled listing | `0x9c10347e62d972614c1b86beedf6562dff363720ece5d6a7b4b3203e6ff741f7` |
+| ok | seller lists A (buyer will inspect this one) | `0x6c5d85a8f94131faad0e93f8320b6545ea9364461b4425bb0cfe59838b0ff8f9` |
+| ok | seller cancels, quietly | `0x98a34b90eeea89c7369afc5ff27526271363653e8acc4bda9d2f772dd613b172` |
+| ok | seller adds collateral while unlisted | `0x0f1ad618b991a3f1cafc675efcb1ed36d7f6707ad359302f711c6035e8e460e8` |
+| ok | seller relists A at the same price | `0x1b4d59fe4c8b873cb1b51d30a3111aaccb288d90106ba9003c49ffde2d147902` |
+| reverts `SnapshotMismatch` | buyer's purchase with the hash they saw is rejected | `0xb4bc01692c7006b55d80fe2b55d1fc44c5d61093d2e3da62b6fd419674c4f33d` |
+| reverts `PriceTooHigh` | buyer's purchase with a too low max price is rejected | `0x0b3d44a885e980a5ed69108eba587bb057405ede7b68fce6378caa260d36803c` |
+| ok | buyer buys A with the fresh snapshot | `0xbb246a80a735398532dee7da85c6544ada56650d3873cdc54e3ab8da59829e52` |
+| ok | seller claims the sale proceeds | `0x15e3bbc4f9d67a28d0cb693271878ffce41e94049eab7f2fe16388f7818e45f5` |
+| reverts `NotController` | old owner can no longer touch the vault | `0xec6757e60972735885663c342a439ef0e3eddc194355ab3e38ef9452bfec823a` |
+| ok | new owner adds collateral to the vault | `0xc2902389237b373b65ae82c076274db572e0b7d31ccc40fcc79b5c281401679e` |
+| ok | seller opens position B (rescue flow) | `0x56a43238f76ae97f3d2024d0c43d305b056e1c3d989f9bca273b33ef6b26be15` |
+| ok | buyer starts the rescue auction (anyone can, ICR is under the line) | `0x34f28d15e59187265e86037b2b0ec6c43e50efd060a27a1c7b6cf724159c833f` |
+| reverts `NotController` | seller cannot touch the vault during the auction | `0x08fef23cb8ffadc24f223607d62d3d5f99d824e095cf76e5b7c8ec1a25fa397f` |
+| ok | buyer approves MUSD for auction | `0x892d179ebe5e4cf05a80fa42fd99949bbf8c675bf7620213c6e7c4e5cf3c6e7c` |
+| reverts `StillRisky` | buyer cannot win with a top-up that is too small | `0xf6766155f42d87263158e5ebb03be528eba9a42e3a9fa7f1aaa4557f448bcd1b` |
+| ok | buyer wins the auction and tops up in the same tx | `0x590116137db5d5980aee6c4f150a461aeeb6f85af52482f7cddc7fb2437731f5` |
+| ok | seller claims the auction payout | `0xef72fa3f1ff94c561346a79761e2a685ce5b3feb6f8c599f3bd630715f284bff` |
+
+---
+
+# First deployment: live run (superseded)
+
+The first deployment (cancun build, 130% public line, 50% floor) is still on chain at the addresses in `deployments.json` under `previousDeployment`. These are its results.
+
 
 Run with `scripts/e2e.mjs` against the deployed contracts, two wallets (seller `0x522bC0c3919fF823173ca4145feEcE905F772ffE`,
 buyer `0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6`). Every transaction below is on chain, links go to
-`https://explorer.test.mezo.org/tx/<hash>`. Raw data: `docs/e2e-results-market.json`, `docs/e2e-results-rescue.json`.
+`https://explorer.test.mezo.org/tx/<hash>`. Raw data: `docs/first-deployment/e2e-results-market.json`, `docs/first-deployment/e2e-results-rescue.json`.
 Reverted rows are real transactions that were sent with a fixed gas limit so the failure is recorded on chain.
 
 Oracle at start of the run: 81,200 MUSD per BTC. Tigris pool spot: 78,686 (3.1% under).
@@ -136,12 +214,12 @@ from the already running auction. A second, mistaken resume also sent one extra 
 
 ---
 
-# Browser pass
+# First deployment: browser pass (superseded)
 
 A real Chrome drove the production build of the frontend (served with the deployed addresses) through every route
 and action. Each wallet is a plain EIP-1193 provider in the page whose signing happens in the Node test process, so no
 key ever reaches the page. Scripts: `scripts/ui-pass.mjs`, `scripts/run-ui-pass.ps1`. Raw results:
-`docs/ui-pass-full.json`, `docs/ui-pass-resume.json`. Screens were checked for the Market, Rescue (live countdown),
+`docs/first-deployment/ui-pass-full.json`, `docs/first-deployment/ui-pass-resume.json`. Screens were checked for the Market, Rescue (live countdown),
 My Positions, position detail (error state, locked state) and a 390px phone width.
 
 Run 1 (full): 26 of 29 checks passed. The 3 failures were test problems or findings listed below. Run 2 (resumed from the
