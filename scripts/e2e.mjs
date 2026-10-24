@@ -150,7 +150,17 @@ async function send(who, label, { to, abi: a, fn, args = [], value, expectRevert
   if (expectRevert) {
     hash = await w.sendTransaction({ to, data, value, gas: 700000n });
   } else {
-    const gas = (await pub.estimateGas({ account: w.account, to, data, value })) * 13n / 10n;
+    // the Mezo RPC sometimes answers eth_estimateGas with just the 21k intrinsic cost (see estimate-probe.mjs)
+    let best = 0n;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const g = await pub.estimateGas({ account: w.account, to, data, value });
+        if (g > best) best = g;
+      } catch (e) {
+        if (i === 0) throw e; // a real revert fails the first estimate too
+      }
+    }
+    const gas = (best * 13n) / 10n > 700000n ? (best * 13n) / 10n : 700000n;
     hash = await w.sendTransaction({ to, data, value, gas });
   }
   const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
