@@ -1,4 +1,5 @@
 import { formatUnits, parseUnits } from "viem";
+import { PRICE_SOURCE_MESSAGE } from "./priceSource";
 
 export function fmt(v: bigint, digits = 2, decimals = 18): string {
   const n = Number(formatUnits(v, decimals));
@@ -45,7 +46,7 @@ const FRIENDLY: Record<string, string> = {
   PriceTooHigh: "The price is above the maximum you agreed to.",
   IcrTooLow: "The position is now below the collateral ratio the seller promised.",
   StillRisky: "That top-up is too small. The position would still be too close to liquidation.",
-  SpotDeviation: "The Mezo oracle and the DEX disagree too much right now, so this is paused. Try again later.",
+  SpotDeviation: PRICE_SOURCE_MESSAGE,
   NotAllowed: "A rescue someone else started can only be cancelled once the position is back above the rescue line. Add collateral first.",
   NotController: "This position is locked by a listing or auction, or you do not hold its Deed.",
   Locked: "This Deed is locked by a listing or auction.",

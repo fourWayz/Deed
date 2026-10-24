@@ -1,5 +1,6 @@
 import type { Address, PublicClient } from "viem";
-import { ADDR, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi } from "./config";
+import { ADDR, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi, spotAbi } from "./config";
+import { priceSourceInRange } from "./priceSource";
 
 export type Listing = { seller: Address; expiry: bigint; price: bigint; minICR: bigint; snapshot: `0x${string}` };
 export type AuctionInfo = {
@@ -30,7 +31,16 @@ export type Position = {
   auction: AuctionInfo | null;
 };
 
-export type Snapshot = { positions: Position[]; price: bigint | null; rescueICR: bigint; safeICR: bigint };
+export type Snapshot = {
+  positions: Position[];
+  price: bigint | null;
+  rescueICR: bigint;
+  safeICR: bigint;
+  // lowest floor, in basis points of the equity, the auction accepts
+  minFloorBps: bigint;
+  // false when the DEX price is further from the oracle than the auction allows, null when it could not be checked
+  priceSourceOk: boolean | null;
+};
 
 const MAX_POSITIONS = 60;
 
@@ -46,16 +56,31 @@ export async function loadPositions(client: PublicClient): Promise<Snapshot> {
     // the oracle reverts when it is stale
   }
 
-  const [rescueICR, safeICR] = await Promise.all([
+  const [rescueICR, safeICR, minFloorBps] = await Promise.all([
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "rescueICR" }),
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "safeICR" }),
+    client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "MIN_FLOOR_BPS" }),
   ]);
+
+  let priceSourceOk: boolean | null = null;
+  if (price !== null) {
+    try {
+      const [source, maxDev] = await Promise.all([
+        client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "spotSource" }),
+        client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "maxDeviationBps" }),
+      ]);
+      const spot = await client.readContract({ address: source, abi: spotAbi, functionName: "spotPrice" });
+      priceSourceOk = priceSourceInRange(price, spot, maxDev);
+    } catch {
+      // leave it unknown, the contract check still protects the action
+    }
+  }
 
   const ids: bigint[] = [];
   for (let i = last; i >= first; i--) ids.push(BigInt(i));
 
   const positions = await Promise.all(ids.map((id) => loadOne(client, id, price)));
-  return { positions, price, rescueICR, safeICR };
+  return { positions, price, rescueICR, safeICR, minFloorBps, priceSourceOk };
 }
 
 async function loadOne(client: PublicClient, id: bigint, price: bigint | null): Promise<Position> {

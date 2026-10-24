@@ -7,8 +7,21 @@ import { fmt, fmtDuration, fmtMUSD, fmtPct } from "@/lib/format";
 import { PositionCard } from "@/components/PositionCard";
 import { BidButton, StartRescueButton } from "@/components/Actions";
 import { ErrorBox, NotDeployed, Reveal, Skeletons, Stat, Ticker } from "@/components/ui";
+import { PRICE_SOURCE_MESSAGE } from "@/lib/priceSource";
 
-function AuctionBody({ p, safeICR, now, onDone }: { p: Position; safeICR: bigint; now: number; onDone: () => void }) {
+function AuctionBody({
+  p,
+  safeICR,
+  now,
+  paused,
+  onDone,
+}: {
+  p: Position;
+  safeICR: bigint;
+  now: number;
+  paused: boolean;
+  onDone: () => void;
+}) {
   const a = p.auction!;
   const end = Number(a.start + a.duration);
   const left = end - now;
@@ -32,7 +45,7 @@ function AuctionBody({ p, safeICR, now, onDone }: { p: Position; safeICR: bigint
         <Stat k="Winner leaves ICR ≥" v={fmtPct(safeICR)} />
       </div>
       {left > 0 ? (
-        <BidButton p={p} safeICR={safeICR} onDone={onDone} />
+        <BidButton p={p} safeICR={safeICR} paused={paused} onDone={onDone} />
       ) : (
         <div className="muted">Auction over. Anyone can end it to return the Deed.</div>
       )}
@@ -61,6 +74,8 @@ export default function Rescue() {
         <div className="notice">The Mezo oracle looks stale right now, so bids and new auctions are paused until it updates.</div>
       )}
 
+      {data && data.priceSourceOk === false && <div className="notice">{PRICE_SOURCE_MESSAGE}</div>}
+
       {data && (
         <div className="stack" style={{ gap: 22 }}>
           <h2>Live auctions</h2>
@@ -68,7 +83,7 @@ export default function Rescue() {
           <Reveal className="grid">
             {live.map((p) => (
               <PositionCard key={p.id.toString()} p={p} rescueICR={data.rescueICR}>
-                <AuctionBody p={p} safeICR={data.safeICR} now={now} onDone={refresh} />
+                <AuctionBody p={p} safeICR={data.safeICR} now={now} paused={data.priceSourceOk === false} onDone={refresh} />
               </PositionCard>
             ))}
           </Reveal>
@@ -78,7 +93,7 @@ export default function Rescue() {
           <Reveal className="grid">
             {atRisk.map((p) => (
               <PositionCard key={p.id.toString()} p={p} rescueICR={data.rescueICR}>
-                <StartRescueButton p={p} onDone={refresh} />
+                <StartRescueButton p={p} paused={data.priceSourceOk === false} onDone={refresh} />
               </PositionCard>
             ))}
           </Reveal>

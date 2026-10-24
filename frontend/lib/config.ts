@@ -84,6 +84,9 @@ export const auctionAbi = parseAbi([
   "function currentPrice(uint256) view returns (uint256)",
   "function requiredTopUp(uint256) view returns (uint256)",
   "function rescueICR() view returns (uint256)",
+  "function spotSource() view returns (address)",
+  "function maxDeviationBps() view returns (uint256)",
+  "function MIN_FLOOR_BPS() view returns (uint256)",
   "function safeICR() view returns (uint256)",
   "function start(uint256 tokenId, uint256 floorBps, uint64 duration)",
   "function startRescue(uint256 tokenId)",
@@ -116,6 +119,8 @@ export const erc20Abi = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
 ]);
+
+export const spotAbi = parseAbi(["function spotPrice() view returns (uint256)"]);
 
 export const priceFeedAbi = parseAbi(["function fetchPrice() view returns (uint256)"]);
 
