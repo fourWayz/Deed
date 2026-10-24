@@ -185,8 +185,11 @@ Checked in the browser by changing what the page receives from the RPC, with the
 - The same text is used for a `SpotDeviation` revert on any action (`frontend/lib/format.ts`). The in-range test is a pure
   function with unit tests (`npm test` in `frontend/`, 4 passing).
 
-Not tested: a real browser-extension wallet (MetaMask, Unisat, OKX, Xverse) and Passport's Bitcoin sign-in; WalletConnect
-(the `deed-dev` project id is a placeholder); the "End auction" button (only appears after the auction has run out, an hour at
+WalletConnect: runs 1 to 3 used the placeholder project id `deed-dev`, which is where the 403 and 400 entries in the JSON come
+from. After a real project id was configured, a fresh load of all four routes and of the connect modal showed no failing
+requests and no page errors. A WalletConnect session itself (QR code, phone wallet) was not tested.
+
+Not tested: a real browser-extension wallet (MetaMask, Unisat, OKX, Xverse) and Passport's Bitcoin sign-in; the "End auction" button (only appears after the auction has run out, an hour at
 least); "Close position" and "Claim surplus" from the UI; Safari and Firefox. The guard is checked by faking the RPC, the real
 pool never moved far enough to trip it.
 

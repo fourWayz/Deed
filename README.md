@@ -116,7 +116,7 @@ flowchart LR
 
 ## Develop
 
-```
+```bash
 forge build
 forge test --no-match-path 'test/fork/*'   # unit, fuzz, invariants against mocks
 forge test --match-path 'test/fork/*'      # real MUSD contracts on a testnet fork
