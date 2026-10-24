@@ -8,12 +8,18 @@ import { RainbowKitProvider, lightTheme } from "@rainbow-me/rainbowkit";
 import { injectedWallet } from "@rainbow-me/rainbowkit/wallets";
 import { PassportProvider, getConfig, getDefaultWallets } from "@mezo-org/passport";
 
+const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+if (!projectId) {
+  // injected wallets still work, WalletConnect will be refused until a project id is set in frontend/.env.local
+  console.warn("NEXT_PUBLIC_WC_PROJECT_ID is not set, WalletConnect is disabled");
+}
+
 const config = getConfig({
   appName: "Deed",
   mezoNetwork: "testnet",
   // Passport's defaults are Bitcoin wallets and WalletConnect, plain EVM wallets like MetaMask need this entry
   wallets: [...getDefaultWallets("testnet"), { groupName: "Browser", wallets: [injectedWallet] }],
-  walletConnectProjectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "deed-dev",
+  walletConnectProjectId: projectId ?? "",
   ssr: true,
 });
 
