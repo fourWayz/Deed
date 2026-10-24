@@ -26,6 +26,10 @@ export const deedAbi = parseAbi([
   "function nextId() view returns (uint256)",
   "function ownerOf(uint256) view returns (address)",
   "function lockedBy(uint256) view returns (address)",
+  "error Locked()",
+  "error NotVenue()",
+  "error NotLocker()",
+  "error AlreadyLocked()",
 ]);
 
 export const factoryAbi = parseAbi([
@@ -42,6 +46,11 @@ export const vaultAbi = parseAbi([
   "function withdraw(uint256 amount, address upperHint, address lowerHint)",
   "function close()",
   "function claimSurplus()",
+  "error NotController()",
+  "error NotOpen()",
+  "error AlreadyOpened()",
+  "error Reentrancy()",
+  "error TransferFailed()",
 ]);
 
 export const marketAbi = parseAbi([
@@ -51,6 +60,22 @@ export const marketAbi = parseAbi([
   "function cancel(uint256 tokenId)",
   "function buy(uint256 tokenId, bytes32 expectedSnapshot, uint256 maxPrice)",
   "function claim()",
+  "error NotOwner()",
+  "error NotListed()",
+  "error AlreadyListed()",
+  "error BadPrice()",
+  "error BadExpiry()",
+  "error BadMinICR()",
+  "error NotActive()",
+  "error NotSeller()",
+  "error Expired()",
+  "error NotExpired()",
+  "error SnapshotMismatch()",
+  "error PriceTooHigh()",
+  "error IcrTooLow(uint256 icr, uint256 minICR)",
+  "error NothingToClaim()",
+  "error TransferFailed()",
+  "error Reentrancy()",
 ]);
 
 export const auctionAbi = parseAbi([
@@ -67,6 +92,23 @@ export const auctionAbi = parseAbi([
   "function end(uint256 tokenId)",
   "function bid(uint256 tokenId, uint256 maxPrice, address upperHint, address lowerHint) payable",
   "function claim()",
+  "error NotOwner()",
+  "error NotSeller()",
+  "error NotRunning()",
+  "error AlreadyRunning()",
+  "error NotActive()",
+  "error NoEquity()",
+  "error BadParams()",
+  "error Healthy(uint256 icr, uint256 rescueICR)",
+  "error NotAllowed()",
+  "error NotExpired()",
+  "error Expired()",
+  "error PriceTooHigh(uint256 price)",
+  "error StillRisky(uint256 icr, uint256 safeICR)",
+  "error SpotDeviation(uint256 oracle, uint256 spot)",
+  "error NothingToClaim()",
+  "error TransferFailed()",
+  "error Reentrancy()",
 ]);
 
 export const erc20Abi = parseAbi([
