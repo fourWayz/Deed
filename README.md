@@ -1,12 +1,71 @@
 # Deed
 
-A marketplace for Mezo borrowing positions, built for the Mezo Buildathon.
+A Mezo MUSD loan is stuck to the wallet that opened it, so you can't sell a healthy position or hand a risky one to
+someone who will rescue it. Deed puts each loan in its own vault and makes control of that vault an NFT you can sell.
 
-## Problem
+**Live demo:** `<add the deployed URL here>`
 
-A Mezo MUSD trove is tied to the address that opened it. You can't hand it to someone else, so you can't sell a
-healthy loan, pass one on, or let someone take over a position that is about to be liquidated. The only exit is to
-repay and close.
+Built for the Mezo Buildathon. Mezo testnet, chain id 31611.
+
+## Try it in 3 steps
+
+1. **Run the app.** `cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the
+   contract addresses are already filled in), then `npm install && npm run dev`.
+2. **Open a position.** Connect a wallet on Mezo testnet with some test BTC (a MetaMask style wallet or Mezo Passport),
+   and open a position, for example 0.04 BTC against 1,800 MUSD.
+3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
+   auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
+   full live run (`node --env-file=.env scripts/e2e.mjs` repeats it).
+
+## Deployed addresses
+
+Mezo testnet (31611), deployed with `script/Deploy.s.sol` in one broadcast with `DeedNFT.init` included, built for the
+london EVM. Deploy transactions: [docs/demo.md](docs/demo.md) and `deployments.json`.
+
+| Contract | Address | Source (Sourcify) |
+| --- | --- | --- |
+| DeedNFT | [`0x848063cbD0230B6A4345311Ec090FDb51F49b681`](https://explorer.test.mezo.org/address/0x848063cbD0230B6A4345311Ec090FDb51F49b681) | [exact match](https://repo.sourcify.dev/31611/0x848063cbD0230B6A4345311Ec090FDb51F49b681) |
+| DeedFactory | [`0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc`](https://explorer.test.mezo.org/address/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) | [exact match](https://repo.sourcify.dev/31611/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) |
+| DeedMarket | [`0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99`](https://explorer.test.mezo.org/address/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) | [exact match](https://repo.sourcify.dev/31611/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) |
+| RescueAuction | [`0x190fB7559BB8023ecAA7c90CFcC17187042B89F9`](https://explorer.test.mezo.org/address/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) | [exact match](https://repo.sourcify.dev/31611/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) |
+| PairSpotPrice (DEX guard) | [`0xc8978277f2BCe7c06F9612d457c12B24F364Ec24`](https://explorer.test.mezo.org/address/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) | [exact match](https://repo.sourcify.dev/31611/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) |
+
+The DEX guard reads the live Tigris MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9`. No mock price source
+is used. Existing MUSD contracts used (checked on chain): MUSD `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`,
+BorrowerOperations `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5`, TroveManager `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0`,
+PriceFeed `0x86bCF0841622a5dAC14A313a15f96A95421b9366`.
+
+An earlier deployment is still on chain and is superseded, do not use it. It is listed under `previousDeployment` in
+`deployments.json` and in [docs/first-deployment/](docs/first-deployment/README.md).
+
+### Verification
+
+The Mezo Blockscout verifier rejects every submission, including an unrelated control contract with no constructor and no
+immutables, so the explorer pages show no source. Sourcify has an exact match (creation and runtime bytecode) for all five
+contracts. The submissions, the control experiment and the reproduction commands are in
+[docs/verification.md](docs/verification.md), and `scripts/verify.sh` repeats them.
+
+## Safety rules
+
+What the deployed contracts enforce, each with the test that shows it. More detail in [docs/security.md](docs/security.md).
+
+- **Strangers start rescues only below 120% ICR.** Liquidation is at 110%, so a stranger can only act on a position that is
+  within 10 points of it. The holder can start an auction at any ratio. Tests:
+  `test_publicStart_onlyBelowOneTwentyPercent`, `test_awayOwnerAt125_cannotBeRescuedByStranger`.
+- **Every auction floor is at least 80% of the equity, owners included.** `MIN_FLOOR_BPS` is 8,000 and `start` rejects
+  anything lower, so a holder cannot be tricked into a near-zero sale either. Tests: `test_floor_cannotGoBelowEightyPercent`,
+  `test_noAuctionCanBeStartedWithAnythingBelowTheMinimumFloor`, `testFuzz_strangerAuctionNeverPaysUnderEightyPercent`.
+- **The oracle prices, the DEX only guards.** Equity, ICR and the top-up amount all come from the Mezo `PriceFeed`. The DEX
+  spot price is compared with the oracle and the call reverts when they differ by more than the limit; it never enters an
+  amount. Test: `test_priceComesFromOracle_notFromSpot`, and the live check in [docs/demo.md](docs/demo.md).
+- **`DEVIATION_BPS=1000` (10%) is a testnet setting.** The testnet pool is not arbitraged against the oracle and sat about 3%
+  under it at deploy time, so a tight limit would pause every rescue. Mainnet should use about 1 to 2% (100 to 200 bps) and a
+  time-weighted price source instead of instant pool reserves. It is a constructor value, so it cannot be changed on this
+  deployment.
+- **A listing or an auction freezes the vault for everyone, the holder included.** While a venue holds the Deed, the vault
+  refuses every action from every caller and the Deed cannot be transferred. Test: `test/FrozenVault.t.sol`
+  (`test_listedVault_isFrozenForTheHolderAndEveryoneElse`, `test_auctionedVault_isFrozenForTheHolderAndEveryoneElse`,
+  `testFuzz_frozenAgainstAnyCallerAnyAmount`).
 
 ## How it works
 
@@ -48,55 +107,12 @@ flowchart LR
 
 ## Security model
 
-Short version, the details are in [docs/security.md](docs/security.md):
-
 - No owner, no fee, no pause, no upgrade. The deployer calls `DeedNFT.init` once to register the factory and venues.
-- A listed or auctioned Deed is locked: the holder can't transfer it or touch the vault until the venue releases it.
 - A sale reverts if collateral, principal, rate or the promised minimum ICR changed since the buyer looked, and if
   live ICR from the Mezo `PriceFeed` is below the promise at settlement.
 - Payments are credited and pulled. Reentrancy guards plus checks-effects-interactions, tested with a hook token.
-- Auction prices come from the Mezo oracle and are rejected when a DEX price differs by more than a fixed margin.
-
-Research on the MUSD contracts is in [docs/mezo-notes.md](docs/mezo-notes.md).
-
-## Deployed addresses (Mezo testnet, chain id 31611)
-
-Deployed with `script/Deploy.s.sol` in one broadcast, `DeedNFT.init` included, built for the **london** EVM. Deploy
-transactions are in [docs/demo.md](docs/demo.md) and `deployments.json`.
-
-| Contract | Address | Source verified (Sourcify) |
-| --- | --- | --- |
-| DeedNFT | [`0x848063cbD0230B6A4345311Ec090FDb51F49b681`](https://explorer.test.mezo.org/address/0x848063cbD0230B6A4345311Ec090FDb51F49b681) | exact match |
-| DeedFactory | [`0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc`](https://explorer.test.mezo.org/address/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) | exact match |
-| DeedMarket | [`0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99`](https://explorer.test.mezo.org/address/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) | exact match |
-| RescueAuction | [`0x190fB7559BB8023ecAA7c90CFcC17187042B89F9`](https://explorer.test.mezo.org/address/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) | exact match |
-| PairSpotPrice (DEX guard) | [`0xc8978277f2BCe7c06F9612d457c12B24F364Ec24`](https://explorer.test.mezo.org/address/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) | exact match |
-
-The DEX guard reads the live Tigris MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9`. No mock price source
-is used. The deployed auction settings: anyone may start a rescue only under **120%** ICR, the winner must leave the position
-at **150%** or above, no auction falls below **80%** of the equity, and the oracle/DEX limit is **10%**, a testnet setting (see
-[docs/security.md](docs/security.md)). The holder can start an auction at any ICR.
-
-**Verification.** Sourcify has an exact match (creation and runtime bytecode) for all five, see
-`https://sourcify.dev/server/v2/contract/31611/<address>`. The Mezo Blockscout verifier rejects every submission,
-including a bare control contract, so the explorer pages show no source. Details and the control experiment are in
-[docs/verification.md](docs/verification.md). `scripts/verify.sh` repeats the submissions.
-
-The first deployment (cancun build, 130% public line, 50% floor) is still on chain and listed under `previousDeployment` in
-`deployments.json`. It is superseded and should not be used.
-
-Existing MUSD testnet contracts used (checked on chain): MUSD `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`,
-BorrowerOperations `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5`, TroveManager `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0`,
-PriceFeed `0x86bCF0841622a5dAC14A313a15f96A95421b9366`.
-
-## Try it in 3 steps
-
-1. The contracts are already deployed (table above). To deploy your own copy, copy `.env.example` to `.env`, fill in
-   `PRIVATE_KEY` and run `forge script script/Deploy.s.sol --rpc-url $MEZO_TESTNET_RPC --broadcast`, then put the printed
-   addresses in `frontend/.env.local` (see `frontend/.env.example`).
-2. Run the app: `cd frontend && npm install && npm run dev`, connect with Mezo Passport on testnet.
-3. Open a position, list it from one wallet and buy it from another. See [docs/demo.md](docs/demo.md), which also holds
-   the hashes of a full live run (`node --env-file=.env scripts/e2e.mjs`).
+- Review findings and what was done about them: [docs/security.md](docs/security.md). Research on the MUSD contracts:
+  [docs/mezo-notes.md](docs/mezo-notes.md).
 
 ## Develop
 
@@ -104,6 +120,7 @@ PriceFeed `0x86bCF0841622a5dAC14A313a15f96A95421b9366`.
 forge build
 forge test --no-match-path 'test/fork/*'   # unit, fuzz, invariants against mocks
 forge test --match-path 'test/fork/*'      # real MUSD contracts on a testnet fork
+cd frontend && npm test                    # price source range check
 ```
 
 ## Limitations
@@ -112,7 +129,8 @@ forge test --match-path 'test/fork/*'      # real MUSD contracts on a testnet fo
 - The snapshot hashes the principal, not total debt. Total debt changes every second through interest, so it would
   never match. Interest is covered by the minimum ICR check.
 - A partial redemption against a listed trove makes `buy` revert until the listing is cancelled and relisted.
-- A third party can start a rescue auction only under 120% ICR, with a floor of 80% of the equity. The owner can top up and cancel.
+- A stranger can start a rescue auction only under 120% ICR, with a floor of 80% of the equity. The owner can top up
+  and cancel.
 - The DEX cross check uses pool reserves, which can be moved in one transaction. It can only make calls revert, it
   never sets a price. Mezo's oracle must be correct and fresh (it reverts after 60 seconds).
 - Liquidated positions can't be sold. Surplus collateral is claimed from the vault.
@@ -122,4 +140,4 @@ forge test --match-path 'test/fork/*'      # real MUSD contracts on a testnet fo
   A wallet that trusts it sends transactions that run out of gas. The app simulates first and sets its own gas limit, but
   a wallet that estimates on its own can still hit this.
 - The wallet list is Passport's defaults plus an injected-wallet entry. WalletConnect needs a real project id in
-  `NEXT_PUBLIC_WC_PROJECT_ID` (the placeholder gets rejected), and extension wallets were not tested.
+  `NEXT_PUBLIC_WC_PROJECT_ID`. Extension wallets (MetaMask, Unisat, OKX, Xverse) were not tested.
