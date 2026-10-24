@@ -61,27 +61,29 @@ Research on the MUSD contracts is in [docs/mezo-notes.md](docs/mezo-notes.md).
 
 ## Deployed addresses (Mezo testnet, chain id 31611)
 
-Deployed with `script/Deploy.s.sol` in one broadcast, `DeedNFT.init` included. Deploy transactions are in
-[docs/demo.md](docs/demo.md) and `deployments.json`.
+Deployed with `script/Deploy.s.sol` in one broadcast, `DeedNFT.init` included, built for the **london** EVM. Deploy
+transactions are in [docs/demo.md](docs/demo.md) and `deployments.json`.
 
-| Contract | Address |
-| --- | --- |
-| DeedNFT | [`0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755`](https://explorer.test.mezo.org/address/0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755) |
-| DeedFactory | [`0x2928D2Dc566ec5f5D859F76B65CD829de5056d84`](https://explorer.test.mezo.org/address/0x2928D2Dc566ec5f5D859F76B65CD829de5056d84) |
-| DeedMarket | [`0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F`](https://explorer.test.mezo.org/address/0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F) |
-| RescueAuction | [`0x4CabFbD149cbC44a61aD574c1baE95c277Cb145B`](https://explorer.test.mezo.org/address/0x4CabFbD149cbC44a61aD574c1baE95c277Cb145B) |
-| PairSpotPrice (DEX guard) | [`0x699Ea2CE021B94FDD8f9E55e4bD12CBAA41e86e5`](https://explorer.test.mezo.org/address/0x699Ea2CE021B94FDD8f9E55e4bD12CBAA41e86e5) |
+| Contract | Address | Source verified (Sourcify) |
+| --- | --- | --- |
+| DeedNFT | [`0x848063cbD0230B6A4345311Ec090FDb51F49b681`](https://explorer.test.mezo.org/address/0x848063cbD0230B6A4345311Ec090FDb51F49b681) | exact match |
+| DeedFactory | [`0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc`](https://explorer.test.mezo.org/address/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) | exact match |
+| DeedMarket | [`0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99`](https://explorer.test.mezo.org/address/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) | exact match |
+| RescueAuction | [`0x190fB7559BB8023ecAA7c90CFcC17187042B89F9`](https://explorer.test.mezo.org/address/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) | exact match |
+| PairSpotPrice (DEX guard) | [`0xc8978277f2BCe7c06F9612d457c12B24F364Ec24`](https://explorer.test.mezo.org/address/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) | exact match |
 
-The DEX guard reads the live Tigris MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9`. No mock price
-source is used. The deployed auction uses `rescueICR` 130%, `safeICR` 150% and a **10%** oracle/DEX limit, which is a testnet
-setting (see [docs/security.md](docs/security.md)).
+The DEX guard reads the live Tigris MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9`. No mock price source
+is used. The deployed auction settings: anyone may start a rescue only under **120%** ICR, the winner must leave the position
+at **150%** or above, no auction falls below **80%** of the equity, and the oracle/DEX limit is **10%**, a testnet setting (see
+[docs/security.md](docs/security.md)). The holder can start an auction at any ICR.
 
-**Explorer verification: not done.** The five contracts were submitted to the Blockscout API
-(`https://api.explorer.test.mezo.org/api`) with `forge verify-contract` and as standard-JSON input. The API accepted the
-submissions and then answered `Fail - Unable to verify` for every contract. The deployed runtime bytecode equals the local
-build apart from the `deployer` immutable, and the metadata hash is identical, so this looks like the explorer's verifier,
-whose advertised EVM versions stop at `london` while the build uses `cancun` and `via_ir`. `scripts/verify.sh` repeats the
-submission. The addresses above are therefore **unverified** on the explorer.
+**Verification.** Sourcify has an exact match (creation and runtime bytecode) for all five, see
+`https://sourcify.dev/server/v2/contract/31611/<address>`. The Mezo Blockscout verifier rejects every submission,
+including a bare control contract, so the explorer pages show no source. Details and the control experiment are in
+[docs/verification.md](docs/verification.md). `scripts/verify.sh` repeats the submissions.
+
+The first deployment (cancun build, 130% public line, 50% floor) is still on chain and listed under `previousDeployment` in
+`deployments.json`. It is superseded and should not be used.
 
 Existing MUSD testnet contracts used (checked on chain): MUSD `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`,
 BorrowerOperations `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5`, TroveManager `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0`,
@@ -110,7 +112,7 @@ forge test --match-path 'test/fork/*'      # real MUSD contracts on a testnet fo
 - The snapshot hashes the principal, not total debt. Total debt changes every second through interest, so it would
   never match. Interest is covered by the minimum ICR check.
 - A partial redemption against a listed trove makes `buy` revert until the listing is cancelled and relisted.
-- A third party can start a rescue auction below the rescue ICR with default terms. The owner can top up and cancel.
+- A third party can start a rescue auction only under 120% ICR, with a floor of 80% of the equity. The owner can top up and cancel.
 - The DEX cross check uses pool reserves, which can be moved in one transaction. It can only make calls revert, it
   never sets a price. Mezo's oracle must be correct and fresh (it reverts after 60 seconds).
 - Liquidated positions can't be sold. Surplus collateral is claimed from the vault.
