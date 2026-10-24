@@ -116,3 +116,8 @@ forge test --match-path 'test/fork/*'      # real MUSD contracts on a testnet fo
 - Liquidated positions can't be sold. Surplus collateral is claimed from the vault.
 - No `refinance`: a position keeps the interest rate it was opened with.
 - The frontend lists the latest 60 Deeds by reading the chain directly, there is no indexer.
+- Mezo's testnet RPC sometimes returns the bare 21k base cost from `eth_estimateGas` (reproduce with `scripts/estimate-probe.mjs`).
+  A wallet that trusts it sends transactions that run out of gas. The app simulates first and sets its own gas limit, but
+  a wallet that estimates on its own can still hit this.
+- The wallet list is Passport's defaults plus an injected-wallet entry. WalletConnect needs a real project id in
+  `NEXT_PUBLIC_WC_PROJECT_ID` (the placeholder gets rejected), and extension wallets were not tested.
