@@ -41,9 +41,10 @@ contract AuctionBase is Base {
     uint256 id;
     PositionVault vault;
 
-    uint256 constant RESCUE_ICR = 1.5e18;
+    uint256 constant RESCUE_ICR = 1.2e18;
     uint256 constant SAFE_ICR = 1.8e18;
-    uint256 constant CRASH = 30_000e18;
+    // 0.1 BTC against about 2,202 MUSD of debt: 113.5% ICR, under the 120% public line, above liquidation
+    uint256 constant CRASH = 25_000e18;
 
     function _init() internal virtual override {
         spot = new MockSpot();
@@ -106,42 +107,101 @@ contract RescueAuctionTest is AuctionBase {
         assertFalse(byOwner);
         assertEq(startTs, block.timestamp);
         assertEq(duration, 6 hours);
-        // 0.1 BTC at 30k = 3000, owed is debt minus gas compensation
+        // 0.1 BTC at 25k = 2500, owed is debt minus gas compensation
         (, uint256 debt) = vault.liveState();
-        assertEq(startPrice, 3_000e18 - (debt - 200e18));
-        assertEq(floorPrice, startPrice / 2);
+        assertEq(startPrice, 2_500e18 - (debt - 200e18));
+        assertEq(floorPrice, startPrice * 8_000 / 10_000);
         assertEq(deed.lockedBy(id), address(auction));
     }
 
     function test_start_ownerAnytimeWithOwnTerms() public {
         vm.prank(alice);
-        auction.start(id, 2_000, 1 days);
+        auction.start(id, 9_000, 1 days);
         (, bool byOwner,, uint64 duration, uint256 startPrice, uint256 floorPrice) = auction.auctions(id);
         assertTrue(byOwner);
         assertEq(duration, 1 days);
-        assertEq(floorPrice, startPrice * 2_000 / 10_000);
+        assertEq(floorPrice, startPrice * 9_000 / 10_000);
     }
 
     function test_start_onlyOwnerAndValidParams() public {
         vm.prank(bob);
         vm.expectRevert(RescueAuction.NotOwner.selector);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
 
         vm.startPrank(alice);
         vm.expectRevert(RescueAuction.BadParams.selector);
         auction.start(id, 10_001, 1 days);
         vm.expectRevert(RescueAuction.BadParams.selector);
-        auction.start(id, 5_000, 59 minutes);
+        auction.start(id, 8_000, 59 minutes);
         vm.expectRevert(RescueAuction.BadParams.selector);
-        auction.start(id, 5_000, 8 days);
+        auction.start(id, 8_000, 8 days);
         vm.stopPrank();
+    }
+
+    function test_floor_cannotGoBelowEightyPercent() public {
+        vm.startPrank(alice);
+        vm.expectRevert(RescueAuction.BadParams.selector);
+        auction.start(id, 7_999, 1 days);
+        vm.expectRevert(RescueAuction.BadParams.selector);
+        auction.start(id, 0, 1 days);
+        auction.start(id, 8_000, 1 days); // exactly the minimum is fine
+        vm.stopPrank();
+        (,,,, uint256 startPrice, uint256 floorPrice) = auction.auctions(id);
+        assertEq(floorPrice, startPrice * 8_000 / 10_000);
+    }
+
+    function test_publicStart_usesEightyPercentFloor() public {
+        _crashAndStart();
+        (,,,, uint256 startPrice, uint256 floorPrice) = auction.auctions(id);
+        assertEq(auction.MIN_FLOOR_BPS(), 8_000);
+        assertEq(auction.DEFAULT_FLOOR_BPS(), 8_000);
+        assertEq(floorPrice, startPrice * 80 / 100);
+        // after the whole fall the winner still pays 80% of the equity
+        skip(6 hours - 1);
+        assertGe(auction.currentPrice(id), floorPrice);
+        assertLe(auction.currentPrice(id), floorPrice + startPrice / 1_000);
+    }
+
+    /// 0.1 BTC against debt D has ICR = 0.1 * price / D. D here is the debt of the vault in setUp.
+    function _priceForICR(uint256 icr) internal view returns (uint256) {
+        (uint256 coll, uint256 debt) = vault.liveState();
+        return debt * icr / coll;
+    }
+
+    function test_publicStart_onlyBelowOneTwentyPercent() public {
+        // 125% and 121%: above the public line, a stranger cannot start. The holder still can.
+        _setPrice(_priceForICR(1.25e18));
+        vm.expectRevert();
+        auction.startRescue(id);
+        _setPrice(_priceForICR(1.21e18));
+        vm.expectRevert();
+        auction.startRescue(id);
+
+        // 119%: under the line
+        _setPrice(_priceForICR(1.19e18));
+        vm.prank(mallory);
+        auction.startRescue(id);
+        assertEq(deed.lockedBy(id), address(auction));
+    }
+
+    function test_publicStart_exactlyAtTheLineIsRefused() public {
+        _setPrice(_priceForICR(1.2e18) + 1); // ICR just at or above 120%
+        vm.expectRevert();
+        auction.startRescue(id);
+    }
+
+    function test_holderCanStillStartAtAnyRatio() public {
+        _setPrice(_priceForICR(1.6e18));
+        vm.prank(alice);
+        auction.start(id, 8_000, 1 days);
+        assertEq(deed.lockedBy(id), address(auction));
     }
 
     function test_start_twiceReverts() public {
         vm.startPrank(alice);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         vm.expectRevert(RescueAuction.AlreadyRunning.selector);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         vm.stopPrank();
     }
 
@@ -157,12 +217,12 @@ contract RescueAuctionTest is AuctionBase {
         market.list(id, 5_000e18, uint64(block.timestamp + 1 days), 2e18);
         vm.prank(alice);
         vm.expectRevert(DeedNFT.AlreadyLocked.selector);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
     }
 
     function test_list_cannotStackOnAuction() public {
         vm.prank(alice);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         vm.prank(alice);
         vm.expectRevert(DeedNFT.AlreadyLocked.selector);
         market.list(id, 5_000e18, uint64(block.timestamp + 1 days), 2e18);
@@ -321,7 +381,7 @@ contract RescueAuctionTest is AuctionBase {
 
     function test_ownerStartedAuction_ownerCancelsAnytime() public {
         vm.startPrank(alice);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         auction.cancel(id);
         vm.stopPrank();
         assertEq(deed.lockedBy(id), address(0));
@@ -329,7 +389,7 @@ contract RescueAuctionTest is AuctionBase {
 
     function test_cancel_onlySeller() public {
         vm.prank(alice);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         vm.prank(bob);
         vm.expectRevert(RescueAuction.NotSeller.selector);
         auction.cancel(id);
@@ -473,7 +533,7 @@ contract RescueAuctionTest is AuctionBase {
         auction.startRescue(id);
         vm.prank(alice);
         vm.expectRevert(RescueAuction.NotActive.selector);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
     }
 
     // --- claim ---

@@ -30,7 +30,7 @@ contract AdversarialTest is AuctionBase {
     // Bidder sends a bid, owner cancels in front of it: the bidder loses nothing but gas.
     function test_ownerCancelsInFrontOfBid_bidderLosesNothing() public {
         vm.prank(alice);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         uint256 price = auction.currentPrice(id);
         uint256 topUp = auction.requiredTopUp(id);
 
@@ -49,7 +49,7 @@ contract AdversarialTest is AuctionBase {
     // After an auction ends, nobody can use the venue hook to push BTC into the vault or move the Deed.
     function test_afterAuction_venueHookAndLockAreGone() public {
         vm.prank(alice);
-        auction.start(id, 5_000, 1 days);
+        auction.start(id, 8_000, 1 days);
         vm.prank(alice);
         auction.cancel(id);
 
@@ -101,6 +101,44 @@ contract AdversarialTest is AuctionBase {
         auction.startRescue(id);
     }
 
+    function _priceForICR(uint256 icr) internal view returns (uint256) {
+        (uint256 coll, uint256 debt) = vault.liveState();
+        return debt * icr / coll;
+    }
+
+    // Review finding 2: an owner who is away at 125% (far above liquidation) can no longer be bought out by a stranger.
+    function test_awayOwnerAt125_cannotBeRescuedByStranger() public {
+        _setPrice(_priceForICR(1.25e18));
+        vm.prank(mallory);
+        vm.expectRevert();
+        auction.startRescue(id);
+        assertEq(deed.lockedBy(id), address(0));
+    }
+
+    // Even when a stranger may start (under 120%), the price can never fall below 80% of the equity at the start.
+    function testFuzz_strangerAuctionNeverPaysUnderEightyPercent(uint256 icrBps, uint256 waitSecs) public {
+        icrBps = bound(icrBps, 11_100, 11_999); // 111% to 119.99%
+        _setPrice(_priceForICR(icrBps * 1e14));
+        auction.startRescue(id);
+        (,,,, uint256 startPrice, uint256 floorPrice) = auction.auctions(id);
+        assertEq(floorPrice, startPrice * 8_000 / 10_000);
+        skip(bound(waitSecs, 0, 30 days));
+        // after the duration the price rests at the floor, never below it
+        uint256 p = auction.currentPrice(id);
+        assertGe(p, startPrice * 8_000 / 10_000);
+        assertLe(p, startPrice);
+    }
+
+    // A holder tricked into signing cannot be made to start an auction that sells for almost nothing.
+    function test_noAuctionCanBeStartedWithAnythingBelowTheMinimumFloor() public {
+        vm.startPrank(alice);
+        for (uint256 bps = 0; bps < 8_000; bps += 799) {
+            vm.expectRevert(RescueAuction.BadParams.selector);
+            auction.start(id, bps, 1 days);
+        }
+        vm.stopPrank();
+    }
+
     // The winner can never end up with a position under safeICR, whatever BTC they send.
     function testFuzz_winnerAlwaysLeavesAboveSafeICR(uint256 topUp, uint256 waitSecs) public {
         _setPrice(CRASH);
@@ -139,9 +177,9 @@ contract AdversarialTest is AuctionBase {
         if (listFirst) {
             market.list(id, 100e18, uint64(block.timestamp + 1 days), 2e18);
             vm.expectRevert(DeedNFT.AlreadyLocked.selector);
-            auction.start(id, 5_000, 1 days);
+            auction.start(id, 8_000, 1 days);
         } else {
-            auction.start(id, 5_000, 1 days);
+            auction.start(id, 8_000, 1 days);
             vm.expectRevert(DeedNFT.AlreadyLocked.selector);
             market.list(id, 100e18, uint64(block.timestamp + 1 days), 2e18);
         }
