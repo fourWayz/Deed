@@ -1,6 +1,6 @@
 # Source verification
 
-## First deployment (cancun build), checked 2026-10-24
+## First deployment (cancun build), checked 2026-10-24. Superseded, do not use
 
 Blockscout (`api.explorer.test.mezo.org`) accepted every submission and answered `Fail - Unable to verify`. Sourcify
 verified all five contracts with an exact match on both creation and runtime bytecode. Chain 31611 is in Sourcify's list.

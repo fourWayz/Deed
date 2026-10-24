@@ -27,7 +27,8 @@
     "DeedNFT.init": "0x0dd54e0f94e5e89959cecf85e2019c05757b7a7def971eb3d1e8257534a4cc04"
   },
   "previousDeployment": {
-    "note": "first deployment, cancun build, 130% public rescue line and 50% floor. Superseded, still on chain.",
+    "status": "superseded",
+    "note": "first deployment, cancun build, 130% public rescue line and 50% floor. Still on chain, do not use.",
     "deedNFT": "0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755",
     "factory": "0x2928D2Dc566ec5f5D859F76B65CD829de5056d84",
     "market": "0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F",
