@@ -1,0 +1,279 @@
+{
+  "startedAt": "2026-10-24T12:58:05.949Z",
+  "wallets": {
+    "seller": "0x522bC0c3919fF823173ca4145feEcE905F772ffE",
+    "buyer": "0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6"
+  },
+  "prices": {
+    "oracle": "80684.75204",
+    "spot": "78685.917246237246880532"
+  },
+  "positionA": {
+    "id": "1",
+    "coll": "0.035975703108228081",
+    "debt": "2001.800001903035502288",
+    "icr": "145.00%"
+  },
+  "sale": {
+    "price": "100",
+    "buyerPaid": "100",
+    "sellerReceived": "100",
+    "newOwner": "0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6"
+  },
+  "rescue": {
+    "deed": "2",
+    "before": {
+      "collateralBTC": "0.029009747051688633",
+      "debtMUSD": "2001.8",
+      "icr": "116.99%",
+      "oraclePrice": "80729.88558"
+    },
+    "after": {
+      "collateralBTC": "0.037277837041676534",
+      "debtMUSD": "2001.80008753963310525",
+      "icr": "150.33%",
+      "oraclePrice": "80724.50318"
+    },
+    "startPrice": "539.934325827999953473",
+    "floorPrice": "431.947460662399962778",
+    "pricePaid": "539.484380556476620179",
+    "topUpBTC": "0.008268089989987901",
+    "sellerPayout": "539.414389069795212778",
+    "equityContract": "540.153557650185018159",
+    "equityOracleBased": "540.153557650185018159",
+    "equitySpotBased": "480.858553306066063072",
+    "newOwner": "0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6"
+  },
+  "txs": [
+    {
+      "who": "seller",
+      "label": "seller opens position A (market flow)",
+      "hash": "0x65846d8d885c6ec9d1a68d6f8d512594fdab507b9db51bbd6755ea6381b67ca1",
+      "status": "success",
+      "block": 16339850
+    },
+    {
+      "who": "seller",
+      "label": "seller sends 1000 MUSD to buyer",
+      "hash": "0x0e03ae5fb7784c0caebc2780dbf15d88f0a2b39bf701de2dc737345eb09964ce",
+      "status": "success",
+      "block": 16339854
+    },
+    {
+      "who": "buyer",
+      "label": "a stranger cannot start a public rescue on a healthy position (about 145%, the line is 120%)",
+      "hash": "0x4bbce9f2719c8a415c8e871c24642e6f7b91f485617bc8e64e2a2b36c25ff0d5",
+      "status": "reverted",
+      "block": 16339857,
+      "revertReason": "Healthy"
+    },
+    {
+      "who": "seller",
+      "label": "the holder cannot start an auction with a floor under 80% of equity",
+      "hash": "0x8d1f9ec1e0db036a9b5fd4142eaeb4bebf2705caca8a140417f5c25e6748ca95",
+      "status": "reverted",
+      "block": 16339858,
+      "revertReason": "BadParams"
+    },
+    {
+      "who": "seller",
+      "label": "seller lists A with a 75s expiry",
+      "hash": "0x8e9dcb3ab5b29b5dd031e545d7f393c38ef6ff0067a5f55e57faa48f22cf62ee",
+      "status": "success",
+      "block": 16339861
+    },
+    {
+      "who": "seller",
+      "label": "seller cannot move a listed Deed",
+      "hash": "0x12d7d9eea2c8981d1c046923b61bb555d21ac9a1e03378a2374eca367c47fafa",
+      "status": "reverted",
+      "block": 16339863,
+      "revertReason": "Locked"
+    },
+    {
+      "who": "seller",
+      "label": "seller cannot withdraw from a listed vault",
+      "hash": "0x182ed57207400ec63d2d972acf66d6f1f3aed964a9154bfbdb99ed6807667658",
+      "status": "reverted",
+      "block": 16339865,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for market",
+      "hash": "0x9574e68ed24053cbb9eb1b4e64c1a22f0ea05160d5f1a9047334639501b0ff02",
+      "status": "success",
+      "block": 16339881
+    },
+    {
+      "who": "buyer",
+      "label": "buyer tries to buy an expired listing",
+      "hash": "0xbc8a3d10966c752ba22e54d3bec894e48bf0add1522199fa3998d16293c18b8b",
+      "status": "reverted",
+      "block": 16339882,
+      "revertReason": "Expired"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer (a stranger) clears the expired listing",
+      "hash": "0x609dad4b326512aafb9028150a7404316c7242d5a9ce2b0ce0871c00f0e548aa",
+      "status": "success",
+      "block": 16339885
+    },
+    {
+      "who": "seller",
+      "label": "seller lists A again (1 day)",
+      "hash": "0xaeef28233d90de1b6fbfb73ce7acf77db33d46bceb42e8648bad88e7233ed558",
+      "status": "success",
+      "block": 16339889
+    },
+    {
+      "who": "buyer",
+      "label": "buyer cannot cancel someone else's live listing",
+      "hash": "0x75e028a21b759542cc6dd23a054b346e48255f95f616038ef820565f810595af",
+      "status": "reverted",
+      "block": 16339891,
+      "revertReason": "NotSeller"
+    },
+    {
+      "who": "seller",
+      "label": "seller cancels the listing",
+      "hash": "0x0bf3e6b49d7d16a41b44cb32042a9f3760830ab6c31e36c6ed8c6f6d6143409b",
+      "status": "success",
+      "block": 16339893
+    },
+    {
+      "who": "buyer",
+      "label": "buyer cannot buy a cancelled listing",
+      "hash": "0x9c10347e62d972614c1b86beedf6562dff363720ece5d6a7b4b3203e6ff741f7",
+      "status": "reverted",
+      "block": 16339894,
+      "revertReason": "NotListed"
+    },
+    {
+      "who": "seller",
+      "label": "seller lists A (buyer will inspect this one)",
+      "hash": "0x6c5d85a8f94131faad0e93f8320b6545ea9364461b4425bb0cfe59838b0ff8f9",
+      "status": "success",
+      "block": 16339897
+    },
+    {
+      "who": "seller",
+      "label": "seller cancels, quietly",
+      "hash": "0x98a34b90eeea89c7369afc5ff27526271363653e8acc4bda9d2f772dd613b172",
+      "status": "success",
+      "block": 16339899
+    },
+    {
+      "who": "seller",
+      "label": "seller adds collateral while unlisted",
+      "hash": "0x0f1ad618b991a3f1cafc675efcb1ed36d7f6707ad359302f711c6035e8e460e8",
+      "status": "success",
+      "block": 16339902
+    },
+    {
+      "who": "seller",
+      "label": "seller relists A at the same price",
+      "hash": "0x1b4d59fe4c8b873cb1b51d30a3111aaccb288d90106ba9003c49ffde2d147902",
+      "status": "success",
+      "block": 16339903
+    },
+    {
+      "who": "buyer",
+      "label": "buyer's purchase with the hash they saw is rejected",
+      "hash": "0xb4bc01692c7006b55d80fe2b55d1fc44c5d61093d2e3da62b6fd419674c4f33d",
+      "status": "reverted",
+      "block": 16339905,
+      "revertReason": "SnapshotMismatch"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer's purchase with a too low max price is rejected",
+      "hash": "0x0b3d44a885e980a5ed69108eba587bb057405ede7b68fce6378caa260d36803c",
+      "status": "reverted",
+      "block": 16339910,
+      "revertReason": "PriceTooHigh"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer buys A with the fresh snapshot",
+      "hash": "0xbb246a80a735398532dee7da85c6544ada56650d3873cdc54e3ab8da59829e52",
+      "status": "success",
+      "block": 16339914
+    },
+    {
+      "who": "seller",
+      "label": "seller claims the sale proceeds",
+      "hash": "0x15e3bbc4f9d67a28d0cb693271878ffce41e94049eab7f2fe16388f7818e45f5",
+      "status": "success",
+      "block": 16339917
+    },
+    {
+      "who": "seller",
+      "label": "old owner can no longer touch the vault",
+      "hash": "0xec6757e60972735885663c342a439ef0e3eddc194355ab3e38ef9452bfec823a",
+      "status": "reverted",
+      "block": 16339920,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "buyer",
+      "label": "new owner adds collateral to the vault",
+      "hash": "0xc2902389237b373b65ae82c076274db572e0b7d31ccc40fcc79b5c281401679e",
+      "status": "success",
+      "block": 16339924
+    },
+    {
+      "who": "seller",
+      "label": "seller opens position B (rescue flow)",
+      "hash": "0x56a43238f76ae97f3d2024d0c43d305b056e1c3d989f9bca273b33ef6b26be15",
+      "status": "success",
+      "block": 16339929
+    },
+    {
+      "who": "buyer",
+      "label": "buyer starts the rescue auction (anyone can, ICR is under the line)",
+      "hash": "0x34f28d15e59187265e86037b2b0ec6c43e50efd060a27a1c7b6cf724159c833f",
+      "status": "success",
+      "block": 16339933
+    },
+    {
+      "who": "seller",
+      "label": "seller cannot touch the vault during the auction",
+      "hash": "0x08fef23cb8ffadc24f223607d62d3d5f99d824e095cf76e5b7c8ec1a25fa397f",
+      "status": "reverted",
+      "block": 16339935,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for auction",
+      "hash": "0x892d179ebe5e4cf05a80fa42fd99949bbf8c675bf7620213c6e7c4e5cf3c6e7c",
+      "status": "success",
+      "block": 16339953
+    },
+    {
+      "who": "buyer",
+      "label": "buyer cannot win with a top-up that is too small",
+      "hash": "0xf6766155f42d87263158e5ebb03be528eba9a42e3a9fa7f1aaa4557f448bcd1b",
+      "status": "reverted",
+      "block": 16339955,
+      "revertReason": "StillRisky"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer wins the auction and tops up in the same tx",
+      "hash": "0x590116137db5d5980aee6c4f150a461aeeb6f85af52482f7cddc7fb2437731f5",
+      "status": "success",
+      "block": 16339959
+    },
+    {
+      "who": "seller",
+      "label": "seller claims the auction payout",
+      "hash": "0xef72fa3f1ff94c561346a79761e2a685ce5b3feb6f8c599f3bd630715f284bff",
+      "status": "success",
+      "block": 16339965
+    }
+  ],
+  "finishedAt": "2026-10-24T13:06:22.278Z"
+}
