@@ -1,0 +1,229 @@
+{
+  "results": [
+    {
+      "name": "route / renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner wallet connects through the Connect modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "second wallet connects",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "My Positions lists Deed #1 and #2",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "create form shows a live ICR preview",
+      "ok": true,
+      "detail": "Resulting ICR 366.2%"
+    },
+    {
+      "name": "add collateral from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "withdraw collateral from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "repay MUSD from the UI (approve then repay)",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "an impossible withdrawal shows an error, not a crash",
+      "ok": true,
+      "detail": "The contract function \"withdraw\" reverted with the following reason: Arithmetic operation resulted in underflow or overflow."
+    },
+    {
+      "name": "list Deed #1 from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "Market shows the listing with price, ICR, rate and equity",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "buy the listing from the UI (approve then buy)",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: Deed #1 now belongs to the buyer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "seller claims the proceeds from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "open a position from the UI (0.02928 BTC, 1800 MUSD)",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "new Deed minted to the opener",
+      "ok": true,
+      "detail": "Deed #3"
+    },
+    {
+      "name": "price source out of range: the page says so and Start rescue is disabled",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "name": "anyone starts a rescue auction from the At risk list",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "live auction price counts down on screen",
+      "ok": true,
+      "detail": "560.22 MUSD -> 560.18 MUSD"
+    },
+    {
+      "name": "auction card shows floor, time left and target ICR",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner cannot cancel a rescue while the ICR is under the line",
+      "ok": true,
+      "detail": "A rescue someone else started can only be cancelled once the position is back above the rescue line. Add collateral firs"
+    },
+    {
+      "name": "owner tops up through the auction",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "owner cancels once the ICR is back above the line",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "owner starts an auction on Deed #2",
+      "ok": false,
+      "detail": "Those auction settings are outside the allowed range."
+    },
+    {
+      "name": "script stopped early",
+      "ok": false,
+      "detail": "locator.waitFor: Timeout 90000ms exceeded."
+    }
+  ],
+  "txs": [
+    {
+      "who": "owner",
+      "to": "0xb4C2061462280FD6e12418c0651938186618EDD2",
+      "selector": "0xc6783af1",
+      "hash": "0x72b6c14ad0deb4b160b752042d1526037ed1e8394aa46c14de8e5886dac3b2e3"
+    },
+    {
+      "who": "owner",
+      "to": "0xb4C2061462280FD6e12418c0651938186618EDD2",
+      "selector": "0xb460af94",
+      "hash": "0x0f73bf655df5ae82a1bfd477adc6fd4d5cf98bd4ca7d1cbf4707309e42e667eb"
+    },
+    {
+      "who": "owner",
+      "to": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "selector": "0x095ea7b3",
+      "hash": "0x6da0c5808603154037508c75d0d8294bd24e2befed5919e4883ca9dc467651da"
+    },
+    {
+      "who": "owner",
+      "to": "0xb4C2061462280FD6e12418c0651938186618EDD2",
+      "selector": "0xc883b2e5",
+      "hash": "0x594123c575c01bcdf9dbf84af7b97d03479d00b0f9a6a679d230fc44e5c81ce3"
+    },
+    {
+      "who": "owner",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0x218160aa",
+      "hash": "0xd90ef9f3bf2a3c77aedd7bb99208fc0ad316b367f4ea8fcb77370a4ea920652a"
+    },
+    {
+      "who": "taker",
+      "to": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "selector": "0x095ea7b3",
+      "hash": "0xf52dcf210e395a62d6ba1f55f5ad1b07a68932a04050c5457c949685bc281924"
+    },
+    {
+      "who": "taker",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0xe21493c1",
+      "hash": "0xb7ce7fae80bccc5401e038f35022ede35f207d3ec765c6c1203f74e568fc7282"
+    },
+    {
+      "who": "owner",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0x4e71d92d",
+      "hash": "0x196dcfc3595013682a3dff9509603df1963605b6e204b12fc1db4d609af5bd92"
+    },
+    {
+      "who": "owner",
+      "to": "0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc",
+      "selector": "0x537272f0",
+      "hash": "0xdf37aa8f04892a10ad79437df71a87a7184014ea9bc9388fc36102ca0928ead7"
+    },
+    {
+      "who": "taker",
+      "to": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
+      "selector": "0xd721713a",
+      "hash": "0x38f157006fce6a4d0b8961cc0ec8623bb1d6cb6f757350bb431f3e71379930ca"
+    },
+    {
+      "who": "owner",
+      "to": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
+      "selector": "0xa0ec6d5d",
+      "hash": "0x0e9b3e35d09854f302166470b07f6ed9d28ac506ea61aa6179f913c5841e5138"
+    },
+    {
+      "who": "owner",
+      "to": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
+      "selector": "0x40e58ee5",
+      "hash": "0xed24f6383f87b0e8ef7109824faea92a4e21b52d7180a71379a386e5450a4610"
+    }
+  ],
+  "consoleErrors": [
+    "[owner] Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[owner] HTTP 400 https://pulse.walletconnect.org/e?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[owner] Failed to load resource: the server responded with a status of 400 ()",
+    "[owner] HTTP 403 https://api.web3modal.org/appkit/v1/config?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[owner] Failed to load resource: the server responded with a status of 403 ()",
+    "[taker] HTTP 403 https://api.web3modal.org/appkit/v1/config?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[taker] Failed to load resource: the server responded with a status of 403 ()",
+    "[taker] HTTP 400 https://pulse.walletconnect.org/e?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[taker] Failed to load resource: the server responded with a status of 400 ()"
+  ]
+}

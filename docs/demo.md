@@ -118,6 +118,78 @@ A second `init` reverts with `AlreadyInitialized` (`0x0dc149f0`), a stranger wit
 | ok | buyer wins the auction and tops up in the same tx | `0x590116137db5d5980aee6c4f150a461aeeb6f85af52482f7cddc7fb2437731f5` |
 | ok | seller claims the auction payout | `0xef72fa3f1ff94c561346a79761e2a685ce5b3feb6f8c599f3bd630715f284bff` |
 
+
+# Second deployment: browser pass
+
+A real Chrome drove the production build (served with the second deployment's addresses) through every route and action,
+same bridge as before: the page gets a plain EIP-1193 provider and every signature happens in the Node test process.
+Scripts: `scripts/ui-pass.mjs`, `scripts/run-ui-pass.ps1`. Raw results: `docs/ui-pass-run1.json`, `-run2.json`, `-run3.json`.
+The test chain state moves forward between runs (Deeds change hands), so the later runs resume from where the earlier ones left
+the chain: run 2 runs the auction section only (`REST=1 AUCTION_ONLY=1`), run 3 the payout claim, list/cancel and phone width
+(`REST=1 CLAIM=1`).
+
+**Run 1, 25 of 28 checks passed.** Everything worked up to the auction section, then:
+  - price source out of range: the page says so and Start rescue is disabled
+  - owner starts an auction on Deed #2: Those auction settings are outside the allowed range.
+  - script stopped early: locator.waitFor: Timeout 90000ms exceeded.
+  - The first failure was my test, not the page: the app reads through Multicall3, so the interceptor that fakes a skewed DEX
+    price never matched. It now opens the multicall and changes only the inner call.
+  - **The second failure was a real bug the rescue change introduced**: the "Start auction" form still defaulted the floor to
+    50%, and the contract now rejects anything under 80%. The form now reads `MIN_FLOOR_BPS` from the chain, defaults to it,
+    labels the field with the range and disables the button with a message when the inputs are out of range.
+
+Transactions sent by the UI in run 1:
+
+| Wallet | Call | Tx |
+| --- | --- | --- |
+| holder wallet `0xeF05…25A6` | vault.addCollateral | `0x72b6c14ad0deb4b160b752042d1526037ed1e8394aa46c14de8e5886dac3b2e3` |
+| holder wallet `0xeF05…25A6` | vault.withdraw | `0x0f73bf655df5ae82a1bfd477adc6fd4d5cf98bd4ca7d1cbf4707309e42e667eb` |
+| holder wallet `0xeF05…25A6` | MUSD.approve | `0x6da0c5808603154037508c75d0d8294bd24e2befed5919e4883ca9dc467651da` |
+| holder wallet `0xeF05…25A6` | vault.0xc883b2e5 | `0x594123c575c01bcdf9dbf84af7b97d03479d00b0f9a6a679d230fc44e5c81ce3` |
+| holder wallet `0xeF05…25A6` | market.list | `0xd90ef9f3bf2a3c77aedd7bb99208fc0ad316b367f4ea8fcb77370a4ea920652a` |
+| second wallet `0x522b…2ffE` | MUSD.approve | `0xf52dcf210e395a62d6ba1f55f5ad1b07a68932a04050c5457c949685bc281924` |
+| second wallet `0x522b…2ffE` | market.buy | `0xb7ce7fae80bccc5401e038f35022ede35f207d3ec765c6c1203f74e568fc7282` |
+| holder wallet `0xeF05…25A6` | market.claim | `0x196dcfc3595013682a3dff9509603df1963605b6e204b12fc1db4d609af5bd92` |
+| holder wallet `0xeF05…25A6` | factory.createPosition | `0xdf37aa8f04892a10ad79437df71a87a7184014ea9bc9388fc36102ca0928ead7` |
+| second wallet `0x522b…2ffE` | auction.startRescue | `0x38f157006fce6a4d0b8961cc0ec8623bb1d6cb6f757350bb431f3e71379930ca` |
+| holder wallet `0xeF05…25A6` | auction.topUp | `0x0e9b3e35d09854f302166470b07f6ed9d28ac506ea61aa6179f913c5841e5138` |
+| holder wallet `0xeF05…25A6` | auction.cancel | `0xed24f6383f87b0e8ef7109824faea92a4e21b52d7180a71379a386e5450a4610` |
+
+**Run 2, 13 of 14 checks passed.** The owner started the auction and the guard checks ran. The failure is the script losing the card it was
+watching once the bid won the auction (the card disappears, which is the expected result); the chain showed Deed #2 with the
+bidder and the payout waiting. `tx()` now reports that case and the step checks the chain.
+
+| Wallet | Call | Tx |
+| --- | --- | --- |
+| holder wallet `0xeF05…25A6` | vault.withdraw | `0x7f979cd94c8f4508600608cf91a37f1d0f22a1fed9bc0d345799dbd767cbdbb9` |
+| holder wallet `0xeF05…25A6` | auction.start | `0x626ccf5edfa1da75716bc92a0296035638211e7d585d9883f5c0852a8f63edd2` |
+| second wallet `0x522b…2ffE` | MUSD.approve | `0x7da6894b397f2de70bcfa9a5b003bd32747ed644b990840d999e56de395e075c` |
+| second wallet `0x522b…2ffE` | auction.bid | `0x708610cb902938f6472ca7136a9799665800ebc171cbe23db0db52e98ff454c0` |
+
+**Run 3, 14 of 14 checks passed.**
+
+| Wallet | Call | Tx |
+| --- | --- | --- |
+| holder wallet `0xeF05…25A6` | auction.claim | `0xd423b56a1fcd39c932aff22bca46b85e1605c3523e58c74acc606a0bc4a06267` |
+| holder wallet `0xeF05…25A6` | market.list | `0xb80420c0e4629b22b36699dfb68222e909e20917cea4754f8fce71e633252168` |
+| holder wallet `0xeF05…25A6` | market.cancel | `0x8ae086445fef97b78ec1ad6cae921ed87aa39b5ed5f6e663f3994eb9d34f4da9` |
+
+## When the DEX price source is out of range
+
+Checked in the browser by changing what the page receives from the RPC, with the chain untouched:
+
+- The DEX spot price returned 30% lower than real. The Rescue page shows **"Price source out of range, try again shortly."**
+  and both **Bid at current price** and **Start rescue auction** are disabled. (Screens: the banner, the dimmed buttons.)
+- The contract guard tripping while the page still thought all was well, simulated as a `SpotDeviation` revert on the
+  `requiredTopUp` read: the page shows the same sentence under the button, not a raw revert.
+- The same text is used for a `SpotDeviation` revert on any action (`frontend/lib/format.ts`). The in-range test is a pure
+  function with unit tests (`npm test` in `frontend/`, 4 passing).
+
+Not tested: a real browser-extension wallet (MetaMask, Unisat, OKX, Xverse) and Passport's Bitcoin sign-in; WalletConnect
+(the `deed-dev` project id is a placeholder); the "End auction" button (only appears after the auction has run out, an hour at
+least); "Close position" and "Claim surplus" from the UI; Safari and Firefox. The guard is checked by faking the RPC, the real
+pool never moved far enough to trip it.
+
 ---
 
 # First deployment: live run (superseded)

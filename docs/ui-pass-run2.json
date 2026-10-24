@@ -1,0 +1,111 @@
+{
+  "results": [
+    {
+      "name": "route / renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner wallet connects through the Connect modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "second wallet connects",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "My Positions lists the Deed the wallet still holds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "create form shows a live ICR preview",
+      "ok": true,
+      "detail": "Resulting ICR 366.2%"
+    },
+    {
+      "name": "withdraw collateral from Deed #3 to bring it under the public rescue line",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "price source out of range: the page says so and Start rescue is disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner starts an auction on Deed #2",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "price source out of range: the page says so and Bid is disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a SpotDeviation revert on the top-up read shows the friendly message",
+      "ok": true,
+      "detail": "Price source out of range, try again shortly."
+    },
+    {
+      "name": "script stopped early",
+      "ok": false,
+      "detail": "elementHandle.waitForSelector: Error: Element is not attached to the DOM"
+    }
+  ],
+  "txs": [
+    {
+      "who": "owner",
+      "to": "0x68833F0c0e6d3E0B21805627867B86157572C013",
+      "selector": "0xb460af94",
+      "hash": "0x7f979cd94c8f4508600608cf91a37f1d0f22a1fed9bc0d345799dbd767cbdbb9"
+    },
+    {
+      "who": "owner",
+      "to": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
+      "selector": "0xab58ed90",
+      "hash": "0x626ccf5edfa1da75716bc92a0296035638211e7d585d9883f5c0852a8f63edd2"
+    },
+    {
+      "who": "taker",
+      "to": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "selector": "0x095ea7b3",
+      "hash": "0x7da6894b397f2de70bcfa9a5b003bd32747ed644b990840d999e56de395e075c"
+    },
+    {
+      "who": "taker",
+      "to": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
+      "selector": "0x04e12e62",
+      "hash": "0x708610cb902938f6472ca7136a9799665800ebc171cbe23db0db52e98ff454c0"
+    }
+  ],
+  "consoleErrors": [
+    "[owner] Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[owner] HTTP 403 https://api.web3modal.org/appkit/v1/config?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[owner] Failed to load resource: the server responded with a status of 403 ()",
+    "[owner] HTTP 400 https://pulse.walletconnect.org/e?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[owner] Failed to load resource: the server responded with a status of 400 ()",
+    "[taker] HTTP 403 https://api.web3modal.org/appkit/v1/config?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[taker] Failed to load resource: the server responded with a status of 403 ()",
+    "[taker] HTTP 400 https://pulse.walletconnect.org/e?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[taker] Failed to load resource: the server responded with a status of 400 ()"
+  ]
+}
