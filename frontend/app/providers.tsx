@@ -5,11 +5,14 @@ import { useState } from "react";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RainbowKitProvider, lightTheme } from "@rainbow-me/rainbowkit";
-import { PassportProvider, getConfig } from "@mezo-org/passport";
+import { injectedWallet } from "@rainbow-me/rainbowkit/wallets";
+import { PassportProvider, getConfig, getDefaultWallets } from "@mezo-org/passport";
 
 const config = getConfig({
   appName: "Deed",
   mezoNetwork: "testnet",
+  // Passport's defaults are Bitcoin wallets and WalletConnect, plain EVM wallets like MetaMask need this entry
+  wallets: [...getDefaultWallets("testnet"), { groupName: "Browser", wallets: [injectedWallet] }],
   walletConnectProjectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "deed-dev",
   ssr: true,
 });
