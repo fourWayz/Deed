@@ -115,3 +115,25 @@ What this does and does not protect against:
 - The vault does not expose `refinance`, so a position keeps the interest rate it was opened with.
 - Hints are supplied by the caller. Bad hints cost gas or fail, they do not break accounting.
 - Contracts are not audited.
+
+## Review findings
+
+A manual adversarial pass over every contract, backed by `test/Adversarial.t.sol` and the live runs in
+`docs/demo.md`. It is not a formal audit and the 12-agent scanner was not run.
+
+| # | Finding | Severity | Status |
+| --- | --- | --- | --- |
+| 1 | Mezo's RPC sometimes answers `eth_estimateGas` with only the 21k base cost. A wallet that trusts it sends a transaction that runs out of gas. Hit on the first UI purchase (`0x1ca3f741543bb0798f05750c32ede482adc200d80eae40d057b3a056dc551195`). | Medium for users, no fund risk | Found live, fixed in the app (`useSafeWrite`), reproducible with `scripts/estimate-probe.mjs`. Wallets that estimate on their own can still hit it. |
+| 2 | Anyone can start a rescue auction once ICR is under 130%, with a 6 hour fall to a 50% floor. An owner who is away at 125% (well above the 110% liquidation line) can be bought out at up to half of their equity. | Medium, design trade-off | Kept as specified. Mitigations if wanted: a higher default floor, a shorter fall, or a short owner-only window before the public start. The owner can top up through the auction and cancel. |
+| 3 | The owner's `cancel` on someone else's auction reads the oracle and the DEX guard. A stale oracle or a wide DEX gap blocks it until the auction runs out (at most 6 hours, then anyone can `end`). | Low | Accepted. |
+| 4 | The market snapshot leaves out accrued unpaid interest and pending liquidation rewards. | Low | Covered by the `minICR` check against live numbers. Documented above. |
+| 5 | The DEX guard reads instant reserves. A flash loan can move it. | Low | It can only make calls revert, never set a price. Use a time weighted source on mainnet. |
+| 6 | `DeedNFT.init` accepts zero or equal venue addresses. | Info | Deployer only, one call. The deploy script passes the three real addresses. |
+| 7 | `closeTrove` reverts in Mezo Recovery Mode, so a holder cannot exit through the vault then. | Info | Protocol rule, noted in `docs/mezo-notes.md`. Topping up and selling still work. |
+| 8 | Source code is not verified on the Mezo explorer. | Info | Explorer verifier rejected the submissions, see README. |
+
+Properties attacked and found to hold: a stale MUSD allowance from a previous owner cannot be spent by the next one; a bid
+sent after the owner cancels reverts and costs the bidder nothing; once an auction ends the venue hook and the lock are gone;
+BTC donated to a vault goes to the holder on close; a stranger cannot start an owner auction; the public rescue cannot start
+on a healthy position or while the DEX disagrees with the oracle; a winner always leaves above `safeICR`; the seller is paid
+exactly what the bidder paid; a Deed is never in a listing and an auction at once.
