@@ -1,0 +1,94 @@
+{
+  "results": [
+    {
+      "name": "route / renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 renders without a wallet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "owner wallet connects through the Connect modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "second wallet connects",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "My Positions lists the Deed the wallet still holds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "create form shows a live ICR preview",
+      "ok": true,
+      "detail": "Resulting ICR 365.6%"
+    },
+    {
+      "name": "list Deed #3 from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "a listed position greys out the vault actions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cancel the listing from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: the cancelled Deed is unlocked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone width has no horizontal scroll",
+      "ok": true,
+      "detail": "overflow 0px"
+    }
+  ],
+  "txs": [
+    {
+      "who": "owner",
+      "to": "0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F",
+      "selector": "0x218160aa",
+      "hash": "0x87525af0aa72ab0c6ab89f4dc7db1a61cffa50153dcceac8fb33162bafbacd99"
+    },
+    {
+      "who": "owner",
+      "to": "0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F",
+      "selector": "0x40e58ee5",
+      "hash": "0xfd8a92323a2a3e3a6991e024511330fee062eb098c5dd6b92daedaf36765a032"
+    }
+  ],
+  "consoleErrors": [
+    "[owner] Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[owner] HTTP 400 https://pulse.walletconnect.org/e?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[owner] Failed to load resource: the server responded with a status of 400 ()",
+    "[owner] HTTP 403 https://api.web3modal.org/appkit/v1/config?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[owner] Failed to load resource: the server responded with a status of 403 ()",
+    "[taker] HTTP 400 https://pulse.walletconnect.org/e?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[taker] Failed to load resource: the server responded with a status of 400 ()",
+    "[taker] HTTP 403 https://api.web3modal.org/appkit/v1/config?projectId=deed-dev&st=appkit&sv=html-core-1.7.8",
+    "[taker] Failed to load resource: the server responded with a status of 403 ()"
+  ]
+}
