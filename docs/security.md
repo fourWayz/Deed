@@ -18,7 +18,7 @@
 | top up during an auction | the seller, through `RescueAuction.topUp` only |
 | list, cancel a listing | the Deed holder; anyone can clear a listing after it expires |
 | buy | anyone holding the MUSD |
-| start a rescue auction | the holder at any time; anyone once ICR < `rescueICR` |
+| start a rescue auction | the holder at any time; anyone once ICR < `rescueICR` (120% in the deployed auction) |
 | end an auction | the seller (under rules below); anyone after it expires |
 
 A locked Deed cannot be moved by its holder, an approved operator or anyone else. Only the venue that took the lock
@@ -57,6 +57,10 @@ so they do not break the snapshot. They are included in the live ICR.
 - Owner-started auctions can be cancelled by the owner at any time. If someone else started the auction (the
   position was under `rescueICR`), the owner can top up through the auction and cancel only once the ICR is back
   above `rescueICR`. This stops the owner from stalling a rescue while the position stays risky.
+- Every auction, whoever starts it, falls to a floor of at least **80% of the equity** at the start (`MIN_FLOOR_BPS`, and the
+  default for a public start). A holder cannot be tricked into starting an auction with a lower floor either, the start call
+  reverts. The most a stranger can take from an inattentive owner is therefore 20% of equity, and only once the position is
+  under 120%, which is 10 points above the 110% liquidation line.
 - If the trove is liquidated during an auction, `bid` reverts (`NotActive`). Once the auction runs out anyone can
   end it and the former owner calls `claimSurplus` on the vault.
 
@@ -109,7 +113,7 @@ What this does and does not protect against:
 
 - A partial redemption against a listed trove cancels nothing by itself, it only makes `buy` revert until the
   listing is cancelled and relisted.
-- A third party can start a rescue auction once ICR < `rescueICR`. The default floor is 50% of equity over six
+- A third party can start a rescue auction once ICR < `rescueICR` (120%). The floor is 80% of equity over six
   hours, so an inattentive owner can lose value. The owner can top up through the auction to stop it.
 - Positions with a liquidated trove cannot be sold or auctioned. Surplus collateral is claimed from the vault.
 - The vault does not expose `refinance`, so a position keeps the interest rate it was opened with.
@@ -124,7 +128,7 @@ A manual adversarial pass over every contract, backed by `test/Adversarial.t.sol
 | # | Finding | Severity | Status |
 | --- | --- | --- | --- |
 | 1 | Mezo's RPC sometimes answers `eth_estimateGas` with only the 21k base cost. A wallet that trusts it sends a transaction that runs out of gas. Hit on the first UI purchase (`0x1ca3f741543bb0798f05750c32ede482adc200d80eae40d057b3a056dc551195`). | Medium for users, no fund risk | Found live, fixed in the app (`useSafeWrite`), reproducible with `scripts/estimate-probe.mjs`. Wallets that estimate on their own can still hit it. |
-| 2 | Anyone can start a rescue auction once ICR is under 130%, with a 6 hour fall to a 50% floor. An owner who is away at 125% (well above the 110% liquidation line) can be bought out at up to half of their equity. | Medium, design trade-off | Kept as specified. Mitigations if wanted: a higher default floor, a shorter fall, or a short owner-only window before the public start. The owner can top up through the auction and cancel. |
+| 2 | Anyone could start a rescue auction once ICR was under 130%, with a 6 hour fall to a 50% floor. An owner who was away at 125% (well above the 110% liquidation line) could be bought out at up to half of their equity. | Medium, design trade-off | **Addressed in the second deployment.** A stranger can start only under 120% and the floor is 80% of equity, enforced for every auction. The most that can be taken is 20% of equity, from a position within 10 points of liquidation. Tests: `test_awayOwnerAt125_cannotBeRescuedByStranger`, `testFuzz_strangerAuctionNeverPaysUnderEightyPercent`, `test_noAuctionCanBeStartedWithAnythingBelowTheMinimumFloor`. A short owner-only window before the public start is still an option. |
 | 3 | The owner's `cancel` on someone else's auction reads the oracle and the DEX guard. A stale oracle or a wide DEX gap blocks it until the auction runs out (at most 6 hours, then anyone can `end`). | Low | Accepted. |
 | 4 | The market snapshot leaves out accrued unpaid interest and pending liquidation rewards. | Low | Covered by the `minICR` check against live numbers. Documented above. |
 | 5 | The DEX guard reads instant reserves. A flash loan can move it. | Low | It can only make calls revert, never set a price. Use a time weighted source on mainnet. |
