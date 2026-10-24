@@ -18,7 +18,9 @@ contract RescueAuction {
     uint256 public constant MAX_DURATION = 7 days;
     // used when someone other than the owner starts an auction
     uint256 public constant DEFAULT_DURATION = 6 hours;
-    uint256 public constant DEFAULT_FLOOR_BPS = 5_000;
+    uint256 public constant DEFAULT_FLOOR_BPS = 8_000;
+    // no auction, owner started or not, may fall below this share of the equity
+    uint256 public constant MIN_FLOOR_BPS = 8_000;
 
     struct Auction {
         address seller;
@@ -107,7 +109,9 @@ contract RescueAuction {
     /// @notice Owner starts an auction with their own floor and duration.
     function start(uint256 tokenId, uint256 floorBps, uint64 duration) external nonReentrant {
         if (deed.ownerOf(tokenId) != msg.sender) revert NotOwner();
-        if (floorBps > 10_000 || duration < MIN_DURATION || duration > MAX_DURATION) revert BadParams();
+        if (floorBps < MIN_FLOOR_BPS || floorBps > 10_000 || duration < MIN_DURATION || duration > MAX_DURATION) {
+            revert BadParams();
+        }
         _start(tokenId, msg.sender, true, floorBps, duration);
     }
 

@@ -20,7 +20,7 @@ contract Deploy is Script {
     address constant PF = 0x86bCF0841622a5dAC14A313a15f96A95421b9366;
     address constant MUSD = 0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503;
 
-    uint256 constant RESCUE_ICR = 1.3e18;
+    uint256 constant RESCUE_ICR = 1.2e18;
     uint256 constant SAFE_ICR = 1.5e18;
     uint256 constant DEFAULT_DEVIATION_BPS = 500;
 
