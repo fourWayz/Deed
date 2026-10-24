@@ -1,19 +1,20 @@
 "use client";
 
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import type { PublicClient } from "viem";
 import { ADDR, deployed, marketAbi, auctionAbi } from "@/lib/config";
 import { usePositions } from "@/lib/usePositions";
 import { fmtMUSD } from "@/lib/format";
 import { useTx } from "@/lib/useTx";
+import { useSafeWrite } from "@/lib/useSafeWrite";
 import { PositionCard } from "@/components/PositionCard";
 import { CreatePosition } from "@/components/Actions";
 import { ErrorBox, NotDeployed, Reveal, Skeletons, TxButton } from "@/components/ui";
 
 function Proceeds({ address }: { address: `0x${string}` }) {
   const client = usePublicClient() as PublicClient;
-  const { writeContractAsync: write } = useWriteContract();
+  const write = useSafeWrite();
   const q = useQuery({
     queryKey: ["proceeds", address],
     refetchInterval: 20_000,
@@ -28,7 +29,9 @@ function Proceeds({ address }: { address: `0x${string}` }) {
   const done = () => q.refetch();
   const m = useTx(done);
   const a = useTx(done);
-  if (!q.data || (q.data.m === 0n && q.data.a === 0n)) return null;
+  // keep the panel while a claim just went through, so the confirmation stays on screen
+  const justClaimed = m.state.status === "done" || a.state.status === "done";
+  if (!q.data || (q.data.m === 0n && q.data.a === 0n && !justClaimed)) return null;
   return (
     <div className="glass row" style={{ marginBottom: 18, flexWrap: "wrap" }}>
       <div>
@@ -38,14 +41,14 @@ function Proceeds({ address }: { address: `0x${string}` }) {
         </div>
       </div>
       <div className="row">
-        {q.data.m > 0n && (
+        {(q.data.m > 0n || m.state.status === "done") && (
           <TxButton
             label={`Claim ${fmtMUSD(q.data.m)} (market)`}
             state={m.state}
             onClick={() => m.run(() => write({ address: ADDR.market, abi: marketAbi, functionName: "claim" }))}
           />
         )}
-        {q.data.a > 0n && (
+        {(q.data.a > 0n || a.state.status === "done") && (
           <TxButton
             label={`Claim ${fmtMUSD(q.data.a)} (auction)`}
             state={a.state}

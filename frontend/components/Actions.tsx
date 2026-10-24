@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import type { PublicClient } from "viem";
 import { ADDR, auctionAbi, factoryAbi, marketAbi, vaultAbi, MCR } from "@/lib/config";
 import { ensureAllowance, snapshotHash } from "@/lib/actions";
@@ -9,13 +9,14 @@ import { getHints } from "@/lib/hints";
 import { auctionPriceAt, type Position } from "@/lib/positions";
 import { fmtBTC, fmtMUSD, fmtPct, parseAmount } from "@/lib/format";
 import { useTx } from "@/lib/useTx";
+import { useSafeWrite } from "@/lib/useSafeWrite";
 import { TxButton } from "./ui";
 
 function useWallet() {
   const { address } = useAccount();
   const client = usePublicClient() as PublicClient;
-  const { writeContractAsync } = useWriteContract();
-  return { address, client, write: writeContractAsync };
+  const write = useSafeWrite();
+  return { address, client, write };
 }
 
 // --- open a position ---

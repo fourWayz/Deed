@@ -2,20 +2,21 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import type { PublicClient } from "viem";
 import { ADDR, auctionAbi, deployed, EXPLORER } from "@/lib/config";
 import { usePositions, useNow } from "@/lib/usePositions";
 import { fmtDuration, fmtMUSD, fmtPct, parseAmount, short } from "@/lib/format";
 import { getHints } from "@/lib/hints";
 import { useTx } from "@/lib/useTx";
+import { useSafeWrite } from "@/lib/useSafeWrite";
 import { PositionCard } from "@/components/PositionCard";
 import { BuyButton, ManagePanel } from "@/components/Actions";
 import { ErrorBox, NotDeployed, Skeletons, Stat, TxButton } from "@/components/ui";
 
 function SellerAuctionTools({ id, coll, principal, onDone }: { id: bigint; coll: bigint; principal: bigint; onDone: () => void }) {
   const client = usePublicClient() as PublicClient;
-  const { writeContractAsync } = useWriteContract();
+  const writeContractAsync = useSafeWrite();
   const [amount, setAmount] = useState("");
   const top = useTx(onDone);
   const amt = parseAmount(amount);
@@ -56,7 +57,7 @@ export default function PositionPage() {
   const p = data?.positions.find((x) => x.id === id);
   const mine = p && address && p.owner.toLowerCase() === address.toLowerCase();
   const endAuction = useTx(refresh);
-  const { writeContractAsync } = useWriteContract();
+  const writeContractAsync = useSafeWrite();
 
   return (
     <>
