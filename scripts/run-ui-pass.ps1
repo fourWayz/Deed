@@ -8,8 +8,10 @@ $root = [IO.Path]::GetFullPath("$PSScriptRoot\..")
 $null = New-Item -ItemType Directory -Force $ShotDir
 $env:SHOT_DIR = [IO.Path]::GetFullPath($ShotDir)
 
-# \wsl.localhost\Ubuntu\home\me\Deed -> /home/me/Deed
-$linuxRoot = ($root -replace '^\\wsl(\.localhost|\$)\[^\]+', '') -replace '\', '/'
+# \\wsl.localhost\Ubuntu\home\me\Deed -> /home/me/Deed
+$prefix = '\\wsl.localhost\' + $Distro
+if (-not $root.StartsWith($prefix)) { throw "run this from a repo that lives in the $Distro WSL distro, got $root" }
+$linuxRoot = $root.Substring($prefix.Length).Replace('\', '/')
 
 $server = Start-Process wsl -ArgumentList "-d", $Distro, "--", "bash", "$linuxRoot/scripts/serve-frontend.sh" -PassThru -WindowStyle Hidden
 try {

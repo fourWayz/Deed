@@ -4,7 +4,18 @@
 // and every signature happens here in Node. Keys are read from the environment and never printed or sent to the page.
 import fs from "node:fs";
 import { chromium } from "playwright-core";
-import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  decodeFunctionData,
+  decodeFunctionResult,
+  encodeErrorResult,
+  encodeFunctionResult,
+  formatUnits,
+  http,
+  parseAbi,
+  toFunctionSelector,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 const dep = JSON.parse(fs.readFileSync(new URL("../deployments.json", import.meta.url)));
@@ -130,12 +141,19 @@ async function tx(page, label, timeout = 150000) {
   const handle = await b.elementHandle();
   const box = (await handle.evaluateHandle((e) => e.parentElement)).asElement();
   await b.click();
-  const verdict = await Promise.race([
-    box.waitForSelector(".txline.ok", { timeout }).then(() => "ok"),
-    box.waitForSelector(".txline.err", { timeout }).then(() => "err"),
-  ]);
-  const text = (await box.$eval(".txline", (e) => e.innerText)).replace(/\s+/g, " ");
-  return { verdict, text };
+  try {
+    const verdict = await Promise.race([
+      box.waitForSelector(".txline.ok", { timeout }).then(() => "ok"),
+      box.waitForSelector(".txline.err", { timeout }).then(() => "err"),
+    ]);
+    const text = (await box.$eval(".txline", (e) => e.innerText)).replace(/\s+/g, " ");
+    return { verdict, text };
+  } catch (e) {
+    // the card holding the button was removed, which is what happens when the action worked (auction won,
+    // payout claimed). Callers that can, check the chain; this only says what the page did.
+    if (/not attached|detached/i.test(e.message)) return { verdict: "detached", text: "the button's card disappeared after the action" };
+    throw e;
+  }
 }
 
 const field = (page, label) => page.getByText(label, { exact: true }).locator("xpath=following-sibling::input").first();
@@ -147,6 +165,74 @@ const fill = async (page, label, v) => {
 const e18 = (v) => formatUnits(v, 18);
 const settle = (page, ms = 2500) => page.waitForTimeout(ms);
 
+// Changes what the page sees from the RPC, without touching the chain.
+//   skew:   the DEX spot price comes back 30% lower, so the page should say the price source is out of range
+//   revert: requiredTopUp fails the way the contract does when its own guard trips (SpotDeviation)
+// The app reads through Multicall3 (viem batches reads), so the call to change sits inside an aggregate3.
+const RPC_GLOB = "**/rpc.test.mezo.org/**";
+const SEL = { skew: toFunctionSelector("spotPrice()"), revert: toFunctionSelector("requiredTopUp(uint256)") };
+const GUARD_MESSAGE = "Price source out of range, try again shortly.";
+const MULTICALL = parseAbi([
+  "struct Call3 { address target; bool allowFailure; bytes callData; }",
+  "struct Result { bool success; bytes returnData; }",
+  "function aggregate3(Call3[] calls) payable returns (Result[] returnData)",
+]);
+const SPOT_DEVIATION = encodeErrorResult({
+  abi: parseAbi(["error SpotDeviation(uint256 oracle, uint256 spot)"]),
+  errorName: "SpotDeviation",
+  args: [1n, 2n],
+});
+async function tamper(page, kind) {
+  await page.route(RPC_GLOB, async (route) => {
+    let body;
+    try {
+      body = JSON.parse(route.request().postData() ?? "");
+    } catch {
+      return route.continue();
+    }
+    const items = Array.isArray(body) ? body : [body];
+    // for every eth_call, the positions of the inner calls we want to change (empty when none)
+    const plan = new Map();
+    for (const it of items) {
+      if (it.method !== "eth_call") continue;
+      const data = it.params?.[0]?.data ?? it.params?.[0]?.input ?? "";
+      if (data.startsWith("0x82ad56cb")) {
+        const calls = decodeFunctionData({ abi: MULTICALL, data }).args[0];
+        const idx = calls.flatMap((c, n) => (c.callData.startsWith(SEL[kind]) ? [n] : []));
+        if (idx.length) plan.set(it.id, idx);
+      } else if (data.startsWith(SEL[kind])) {
+        plan.set(it.id, "direct");
+      }
+    }
+    if (plan.size === 0) return route.continue();
+    const real = await route.fetch();
+    const json = await real.json();
+    const out = Array.isArray(json) ? json : [json];
+    for (const o of out) {
+      const how = plan.get(o.id);
+      if (!how || o.result === undefined) continue;
+      if (how === "direct") {
+        if (kind === "skew") o.result = "0x" + ((BigInt(o.result) * 7n) / 10n).toString(16).padStart(64, "0");
+        else {
+          delete o.result;
+          o.error = { code: 3, message: "execution reverted", data: SPOT_DEVIATION };
+        }
+        continue;
+      }
+      const results = decodeFunctionResult({ abi: MULTICALL, functionName: "aggregate3", data: o.result }).map((r) => ({ ...r }));
+      for (const n of how) {
+        if (kind === "skew") {
+          results[n].returnData = "0x" + ((BigInt(results[n].returnData) * 7n) / 10n).toString(16).padStart(64, "0");
+        } else {
+          results[n].success = false;
+          results[n].returnData = SPOT_DEVIATION;
+        }
+      }
+      o.result = encodeFunctionResult({ abi: MULTICALL, functionName: "aggregate3", result: results });
+    }
+    await route.fulfill({ response: real, json: Array.isArray(json) ? out : out[0] });
+  });
+}
 async function main() {
   const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "C:/Program Files/Google/Chrome/Application/chrome.exe", headless: true });
   const owner = await session(browser, "owner");
@@ -258,6 +344,19 @@ async function main() {
   await taker.goto(BASE + "/rescue", { waitUntil: "domcontentloaded" });
   await taker.getByText(`Deed #${id3}`, { exact: true }).first().waitFor({ timeout: 90000 });
   await shot(taker, "rescue-atrisk");
+  await tamper(taker, "skew");
+  await taker.reload({ waitUntil: "domcontentloaded" });
+  await taker.getByText(`Deed #${id3}`, { exact: true }).first().waitFor({ timeout: 90000 });
+  await settle(taker, 3000);
+  await shot(taker, "rescue-atrisk-paused");
+  step(
+    "price source out of range: the page says so and Start rescue is disabled",
+    (await taker.getByText(GUARD_MESSAGE, { exact: true }).first().isVisible()) &&
+      (await taker.getByRole("button", { name: "Start rescue auction", exact: true }).first().isDisabled()),
+  );
+  await taker.unroute(RPC_GLOB);
+  await taker.reload({ waitUntil: "domcontentloaded" });
+  await taker.getByText(`Deed #${id3}`, { exact: true }).first().waitFor({ timeout: 90000 });
   r = await tx(taker, "Start rescue auction");
   step("anyone starts a rescue auction from the At risk list", r.verdict === "ok", r.text);
   await taker.reload({ waitUntil: "domcontentloaded" });
@@ -282,24 +381,77 @@ async function main() {
   r = await tx(owner, "Cancel auction");
   step("owner cancels once the ICR is back above the line", r.verdict === "ok", r.text);
 
+  } // end of the steps skipped in REST mode
+
+  // AUCTION_ONLY=1 with REST=1 runs just this section, for a chain that is already past the earlier steps
+  if (!REST || process.env.AUCTION_ONLY === "1") {
+  if (REST) {
+    // put Deed #3 back under the public line, so the Start button has something to guard
+    await owner.goto(BASE + `/position/${id3}`, { waitUntil: "domcontentloaded" });
+    await owner.getByRole("heading", { name: "Manage" }).waitFor({ timeout: 60000 });
+    await fill(owner, "Amount (BTC for collateral, MUSD for repay)", "0.0035");
+    r = await tx(owner, "Withdraw collateral");
+    step(`withdraw collateral from Deed #${id3} to bring it under the public rescue line`, r.verdict === "ok", r.text);
+    await tamper(taker, "skew");
+    await taker.goto(BASE + "/rescue", { waitUntil: "domcontentloaded" });
+    await taker.getByText(`Deed #${id3}`, { exact: true }).first().waitFor({ timeout: 90000 });
+    await settle(taker, 3000);
+    await shot(taker, "rescue-atrisk-paused");
+    step(
+      "price source out of range: the page says so and Start rescue is disabled",
+      (await taker.getByText(GUARD_MESSAGE, { exact: true }).first().isVisible()) &&
+        (await taker.getByRole("button", { name: "Start rescue auction", exact: true }).first().isDisabled()),
+    );
+    await taker.unroute(RPC_GLOB);
+  }
+
   // 8. owner started auction on Deed #2, other wallet wins it
   await owner.goto(BASE + "/position/2", { waitUntil: "domcontentloaded" });
   await owner.getByRole("heading", { name: "Rescue auction" }).waitFor({ timeout: 60000 });
-  await fill(owner, "Floor (% of equity)", "50");
+  await fill(owner, "Floor (% of equity, 80 to 100)", "80");
   await fill(owner, "Duration (hours)", "1");
   r = await tx(owner, "Start auction");
   step("owner starts an auction on Deed #2", r.verdict === "ok", r.text);
   await taker.goto(BASE + "/rescue", { waitUntil: "domcontentloaded" });
   await taker.getByText("Deed #2", { exact: true }).first().waitFor({ timeout: 90000 });
+
+  // 1) the page notices a skewed DEX price before anyone signs
+  await tamper(taker, "skew");
+  await taker.reload({ waitUntil: "domcontentloaded" });
+  await taker.getByText("Deed #2", { exact: true }).first().waitFor({ timeout: 90000 });
+  await settle(taker, 3000);
+  await shot(taker, "rescue-bid-paused");
+  step(
+    "price source out of range: the page says so and Bid is disabled",
+    (await taker.getByText(GUARD_MESSAGE, { exact: true }).first().isVisible()) &&
+      (await taker.getByRole("button", { name: "Bid at current price", exact: true }).first().isDisabled()),
+  );
+  await taker.unroute(RPC_GLOB);
+
+  // 2) the contract guard trips while the page still thought all was well: friendly text, not a raw revert
+  await tamper(taker, "revert");
+  await taker.reload({ waitUntil: "domcontentloaded" });
+  await taker.getByText("Deed #2", { exact: true }).first().waitFor({ timeout: 90000 });
   r = await tx(taker, "Bid at current price");
-  step("winner bids from the UI (approve, top-up, bid in one flow)", r.verdict === "ok", r.text);
+  await shot(taker, "rescue-bid-guard-revert");
+  step("a SpotDeviation revert on the top-up read shows the friendly message", r.verdict === "err" && r.text.includes(GUARD_MESSAGE), r.text.slice(0, 120));
+  await taker.unroute(RPC_GLOB);
+  await taker.reload({ waitUntil: "domcontentloaded" });
+  await taker.getByText("Deed #2", { exact: true }).first().waitFor({ timeout: 90000 });
+
+  r = await tx(taker, "Bid at current price");
+  step("winner bids from the UI (approve, top-up, bid in one flow)", r.verdict === "ok" || r.verdict === "detached", r.text);
   step("chain: Deed #2 now belongs to the bidder", (await ownerOf(2)).toLowerCase() === wallets.taker.address.toLowerCase());
+  } // end of the auction section
+
+  // CLAIM=1 with REST=1 runs just the payout claim
+  if (!REST || process.env.CLAIM === "1") {
   await owner.goto(BASE + "/", { waitUntil: "domcontentloaded" });
   await owner.getByRole("button", { name: /Claim .* \(auction\)/ }).waitFor({ timeout: 60000 });
   await shot(owner, "proceeds-auction");
   r = await tx(owner, (await owner.getByRole("button", { name: /Claim .* \(auction\)/ }).first().innerText()).trim());
   step("previous owner claims the auction payout", r.verdict === "ok", r.text);
-  } // end of the steps skipped in REST mode
+  } // end of the claim step
 
   // 9. list and cancel
   await owner.goto(BASE + `/position/${id3}`, { waitUntil: "domcontentloaded" });
