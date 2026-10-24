@@ -15,6 +15,9 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 
 const dep = JSON.parse(fs.readFileSync(new URL("../deployments.json", import.meta.url)));
+for (const k of ["deedNFT", "factory", "market", "auction", "spotSource", "musd", "priceFeed", "troveManager", "hintHelpers", "sortedTroves"]) {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(dep[k] ?? "")) throw new Error(`deployments.json has no address for "${k}"`);
+}
 const RPC = process.env.MEZO_TESTNET_RPC;
 const key = (k) => (k.startsWith("0x") ? k : `0x${k}`);
 const chain = {
@@ -73,6 +76,8 @@ const abi = {
   ]),
   auction: parseAbi([
     "function startRescue(uint256 tokenId)",
+    "function start(uint256 tokenId, uint256 floorBps, uint64 duration)",
+    "error BadParams()",
     "function bid(uint256 tokenId, uint256 maxPrice, address upperHint, address lowerHint) payable",
     "function claim()",
     "function claimable(address) view returns (uint256)",
@@ -248,7 +253,7 @@ async function main() {
   if (!RESUME) {
   // --- 1. seller opens the position that goes to market
   say("\n[1] open market position");
-  const coll1 = ((totalDebt * 16n) / 10n * 10n ** 18n) / price0 + 10n ** 12n; // about 160% ICR
+  const coll1 = ((totalDebt * 145n) / 100n * 10n ** 18n) / price0 + 10n ** 12n; // about 145% ICR
   // REUSE_A=<id> picks up a position opened by an earlier run so a retry does not burn more BTC
   const id1 = process.env.REUSE_A
     ? BigInt(process.env.REUSE_A)
@@ -267,7 +272,23 @@ async function main() {
     args: [buyer.address, 1000n * 10n ** 18n],
   });
 
-  const minICR = 14n * 10n ** 17n;
+  say("\n[2b] rescue rules that changed");
+  await send("buyer", "a stranger cannot start a public rescue on a healthy position (about 145%, the line is 120%)", {
+    to: dep.auction,
+    abi: abi.auction,
+    fn: "startRescue",
+    args: [id1],
+    expectRevert: "Healthy",
+  });
+  await send("seller", "the holder cannot start an auction with a floor under 80% of equity", {
+    to: dep.auction,
+    abi: abi.auction,
+    fn: "start",
+    args: [id1, 7999n, 3600n],
+    expectRevert: "BadParams",
+  });
+
+  const minICR = 13n * 10n ** 17n;
   const salePrice = 100n * 10n ** 18n;
 
   // --- 3. expiry
@@ -403,8 +424,8 @@ async function main() {
   const rescueICR = await read(dep.auction, abi.auction, "rescueICR");
   const safeICR = await read(dep.auction, abi.auction, "safeICR");
   const price1 = await read(dep.priceFeed, abi.feed, "fetchPrice");
-  // aim for 125.5% so a few percent of price movement keeps it under the 130% line and above 110%
-  const coll2 = ((totalDebt * 1255n) / 1000n * 10n ** 18n) / price1 + 10n ** 12n;
+  // aim for 117%: under the 120% public line, and 7 points above liquidation
+  const coll2 = ((totalDebt * 1170n) / 1000n * 10n ** 18n) / price1 + 10n ** 12n;
   const id2 = RESUME ?? (await open("seller", "seller opens position B (rescue flow)", coll2, debt));
   const b = await snap(id2);
   say(`  Deed #${id2} coll ${e18(b.liveColl)} BTC debt ${e18(b.debt)} MUSD ICR ${pct(b.icr)} (rescue line ${pct(rescueICR)})`);
@@ -428,6 +449,7 @@ async function main() {
   }
   const au = await read(dep.auction, abi.auction, "auctions", [id2]);
   say(`  start price ${e18(au[4])}  floor ${e18(au[5])}  duration ${au[3]}s`);
+  if (au[5] !== (au[4] * 8000n) / 10000n) throw new Error("the floor is not 80% of the start price");
   await send("seller", "seller cannot touch the vault during the auction", {
     to: b.vault,
     abi: abi.vault,
