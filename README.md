@@ -3,7 +3,8 @@
 A Mezo MUSD loan is stuck to the wallet that opened it, so you can't sell a healthy position or hand a risky one to
 someone who will rescue it. Deed puts each loan in its own vault and makes control of that vault an NFT you can sell.
 
-**Live demo:** https://frontend-iota-blush-70.vercel.app
+**Live demo:** [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app)
+**Demo video:** `<add demo video link here>`
 
 Built for the Mezo Buildathon. Mezo testnet, chain id 31611.
 
