@@ -9,13 +9,17 @@ Built for the Mezo Buildathon. Mezo testnet, chain id 31611.
 
 ## Try it in 3 steps
 
-1. **Run the app.** `cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the
-   contract addresses are already filled in), then `npm install && npm run dev`.
-2. **Open a position.** Connect a wallet on Mezo testnet with some test BTC (a MetaMask style wallet or Mezo Passport),
-   and open a position, for example 0.04 BTC against 1,800 MUSD.
+1. **Open the live app and connect.** Go to https://frontend-iota-blush-70.vercel.app and connect a wallet on Mezo
+   testnet (chain id 31611) with test BTC from the [Mezo faucet](https://faucet.test.mezo.org/).
+2. **Open a position.** On My Positions, open one, for example 0.04 BTC against 1,800 MUSD.
 3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
    auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
    full live run (`node --env-file=.env scripts/e2e.mjs` repeats it).
+
+### Run locally
+
+`cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the contract addresses are
+already filled in), then `npm install && npm run dev`.
 
 ## Deployed addresses
 
