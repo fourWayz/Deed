@@ -1,0 +1,43 @@
+PASS  RPC down: Market shows a readable error with Retry  -  Could not load positions: HTTP request failed. Retry
+PASS  route / at desktop: renders, no sideways scroll
+PASS  route / at 390px: renders, no sideways scroll
+PASS  route /positions at desktop: renders, no sideways scroll
+PASS  route /positions at 390px: renders, no sideways scroll
+PASS  route /market at desktop: renders, no sideways scroll
+PASS  route /market at 390px: renders, no sideways scroll
+PASS  route /rescue at desktop: renders, no sideways scroll
+PASS  route /rescue at 390px: renders, no sideways scroll
+PASS  route /activity at desktop: renders, no sideways scroll
+PASS  route /activity at 390px: renders, no sideways scroll
+PASS  route /start at desktop: renders, no sideways scroll
+PASS  route /start at 390px: renders, no sideways scroll
+PASS  route /position/1 at desktop: renders, no sideways scroll
+PASS  route /position/1 at 390px: renders, no sideways scroll
+PASS  landing fee text shows the on-chain rates and the treasury  -  Deed's fee: 0.50% of the sale price on a fixed price sale and 0.50% on a rescue auction, read from the contrac
+PASS  landing labels the earlier deployment  -  Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees.
+PASS  landing says the indexer has not indexed v3 yet (it follows v2 only)
+PASS  empty wallet sees the empty state on Positions
+PASS  wizard, empty wallet: step 1 open with faucet link, steps 2 and 3 locked
+PASS  wizard, funded wallet: step 1 done, step 2 open with the create form
+PASS  open a position from the wizard (0.04 BTC, 1800 MUSD)  -  Done. view transaction
+PASS  new Deed minted to the opener  -  Deed #4
+PASS  wizard moves to step 3 and shows the list form
+PASS  list form default ICR is the position's ICR rounded down, capped at 150  -  default 142%, lens icr 142.68%
+PASS  position page entire debt matches DeedLens  -  ui 2001.8, lens 2001.8000
+PASS  debt breakdown rows add up to the entire debt  -  2001.8 + 0 + 0 vs 2001.8
+PASS  health gauge renders
+PASS  borrow preview shows the fee and the new ICR
+PASS  borrow 50 MUSD from the UI  -  Done. view transaction
+PASS  chain: wallet received 50 MUSD and the debt rose by 50 plus the borrowing fee  -  received 50, debt +50.0500
+PASS  refinance to the current rate from the UI  -  Done. view transaction
+PASS  chain: position still active after refinance, rate now matches the system  -  rate 100 -> 100 bps, debt 2051.850 -> 2052.220
+PASS  list form fee preview: 0.50% of 50 is 0.25, seller receives 49.75  -  Fee 0.25 MUSD, taken from the sale. You receive 49.75 MUSD.
+PASS  fee preview equals the contract's feeFor  -  feeFor(50) = 0.25
+PASS  list from the wizard with the untouched default ICR  -  Done. view transaction
+FAIL  wizard step 3 shows listed
+FAIL  market card shows the buyer's fee line and the equity comparison  -  You pay 50.00 MUSD. 0.25 MUSD of it is the protocol fee, paid out of the seller's side, nothing extr
+FAIL  buy the listing from the UI (approve then buy)  -  card removed after the action
+PASS  chain: Deed now belongs to the buyer
+PASS  chain: seller credited 49.75, treasury credited 0.25  -  seller +49.75, treasury +0.25
+FAIL  seller claims the proceeds from the UI (Claim 49.75 MUSD (market))  -  card removed after the action
+PASS  chain: wallet received the proceeds

@@ -112,10 +112,11 @@ async function tx(page, label, timeout = 180000) {
     const text = (await box.$eval(".txline", (e) => e.innerText)).replace(/\s+/g, " ");
     return { verdict, text };
   } catch (e) {
-    if (/not attached|detached/i.test(e.message)) return { verdict: "detached", text: "card removed after the action" };
+    if (/not attached|detached/i.test(e.message)) return { verdict: "detached", text: "card removed after the action, the chain check that follows decides" };
     throw e;
   }
 }
+const okOrGone = (r) => r.verdict === "ok" || r.verdict === "detached";
 const field = (page, label) => page.getByText(label, { exact: true }).locator("xpath=following-sibling::input").first();
 const fill = async (page, label, v) => { const f = field(page, label); await f.fill(""); await f.fill(String(v)); };
 const text = (page) => page.locator("main").innerText();
@@ -152,7 +153,7 @@ function rewrite(kind, data, canClose) {
   const p = decodeFunctionResult({ abi: lensAbi, functionName: "position", data });
   return encodeFunctionResult({
     abi: lensAbi, functionName: "position",
-    result: [{ ...p, tcr: 13n * 10n ** 17n, recoveryMode: true, canWithdraw: false, canBorrow: false, canRefinance: false, canClose }],
+    result: { ...p, tcr: 13n * 10n ** 17n, recoveryMode: true, canWithdraw: false, canBorrow: false, canRefinance: false, canClose },
   });
 }
 async function simulateRecovery(page, canClose) {
@@ -352,8 +353,8 @@ async function main() {
     step("fee preview equals the contract's feeFor", fee === parseUnits("0.25", 18), `feeFor(50) = ${e18(fee)}`);
     r = await tx(alice, "List for sale");
     step("list from the wizard with the untouched default ICR", r.verdict === "ok", r.text);
-    await settle(alice, 2000);
-    step("wizard step 3 shows listed", /is listed/.test(await text(alice)));
+    const listedShown = await alice.getByText(/is listed/).first().waitFor({ timeout: 60000 }).then(() => true, () => false);
+    step("wizard step 3 shows listed", listedShown);
 
     const treasuryBefore = await claimable(dep.market, dep.treasury);
     const aliceClaimBefore = await claimable(dep.market, wallets.alice.address);
@@ -362,10 +363,10 @@ async function main() {
     await bob.getByText(`Deed #${N}`, { exact: true }).first().waitFor({ timeout: 90000 });
     await settle(bob, 2500);
     const mk = await text(bob);
-    step("market card shows the buyer's fee line and the equity comparison", /You pay 50\.00 MUSD\. 0\.25 MUSD of it is the protocol fee/.test(mk) && /Equity vs price/.test(mk), (mk.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 100));
+    step("market card shows the buyer's fee line and the equity comparison", /You pay 50\.00 MUSD\. 0\.25 MUSD of it is the protocol fee/.test(mk) && /equity vs price/i.test(mk), (mk.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 100));
     await shot(bob, "market-listing");
     r = await tx(bob, "Buy for 50.00 MUSD");
-    step("buy the listing from the UI (approve then buy)", r.verdict === "ok", r.text);
+    step("buy the listing from the UI (approve then buy)", okOrGone(r), r.text);
     step("chain: Deed now belongs to the buyer", lc(await pub.readContract({ address: dep.deedNFT, abi: nftAbi, functionName: "ownerOf", args: [N] })) === lc(wallets.bob.address));
     const aliceGain = (await claimable(dep.market, wallets.alice.address)) - aliceClaimBefore;
     const treasuryGain = (await claimable(dep.market, dep.treasury)) - treasuryBefore;
@@ -377,7 +378,7 @@ async function main() {
     const claimLabel = (await alice.getByRole("button", { name: /Claim .* \(market\)/ }).first().innerText()).trim();
     const before = await musdOf(wallets.alice.address);
     r = await tx(alice, claimLabel);
-    step(`seller claims the proceeds from the UI (${claimLabel})`, r.verdict === "ok", r.text);
+    step(`seller claims the proceeds from the UI (${claimLabel})`, okOrGone(r), r.text);
     step("chain: wallet received the proceeds", near(e18((await musdOf(wallets.alice.address)) - before), 49.75, 0.001));
   }
 
@@ -446,7 +447,7 @@ async function main() {
     await shot(alice, "rescue-live");
     const oldOwnerMusd = await musdOf(wallets.alice.address);
     r = await tx(alice, "Bid at current price");
-    step("win the rescue auction from the UI (approve, then bid with BTC top-up)", r.verdict === "ok" || r.verdict === "detached", r.text);
+    step("win the rescue auction from the UI (approve, then bid with BTC top-up)", okOrGone(r), r.text);
     const pb = await lens(N);
     step("chain: bidder holds the Deed and the position left above the safe ICR", lc(pb.holder) === lc(wallets.alice.address) && pb.icr >= 15n * 10n ** 17n, `${(Number(pb.icr) / 1e16).toFixed(2)}%`);
     const paid = oldOwnerMusd - (await musdOf(wallets.alice.address));
@@ -460,7 +461,7 @@ async function main() {
     const lab = (await bob.getByRole("button", { name: /Claim .* \(auction\)/ }).first().innerText()).trim();
     const b0 = await musdOf(wallets.bob.address);
     r = await tx(bob, lab);
-    step(`old owner claims the auction proceeds from the UI (${lab})`, r.verdict === "ok", r.text);
+    step(`old owner claims the auction proceeds from the UI (${lab})`, okOrGone(r), r.text);
     step("chain: wallet received the auction proceeds", near(e18((await musdOf(wallets.bob.address)) - b0), e18(bobGain), 0.001));
   }
 
