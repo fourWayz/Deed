@@ -19,9 +19,19 @@ export function loadAbi(version, contract) {
 }
 
 // config/deployments.json lists every deployment the indexer follows
-export function loadDeployments(file = path.join(root, 'config', 'deployments.json')) {
+export function loadDeployments(file = path.join(root, 'config', 'deployments.json'), rootFile = path.join(root, '..', 'deployments.json')) {
   const j = readJson(file)
-  return j.deployments
+  return j.deployments.map((d) => {
+    if (!d.fromRoot) return d
+    // the current deployment lives in the repo-root deployments.json, written by the deploy script
+    const r = readJson(rootFile)
+    if (r.version !== d.version) return { ...d, startBlock: null, contracts: {} }
+    return {
+      ...d,
+      startBlock: r.deployBlock,
+      contracts: { DeedNFT: r.deedNFT, DeedFactory: r.factory, DeedMarket: r.market, RescueAuction: r.auction },
+    }
+  })
 }
 
 // builds the list of contracts to watch for one deployment; skips ones without an address or an ABI

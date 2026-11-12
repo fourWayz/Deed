@@ -10,8 +10,12 @@ export const VOLUME_FIELD = {
   'RescueAuction.Won': 'price',
 }
 
-// events that carry a protocol fee. v2 has no fee anywhere, so this is empty until a v3 ABI says otherwise.
-export const FEE_FIELD = {}
+// events that carry a protocol fee, and which argument holds it. v2 has no fee anywhere.
+// In v3 `price` is the gross price and `fee` is the part of it credited to the treasury (price - fee goes to the seller).
+export const FEE_FIELD = {
+  'DeedMarket.Sold': 'fee',
+  'RescueAuction.Won': 'fee',
+}
 
 // address arguments that name a participant, and the role they get
 const WALLET_ARGS = ['owner', 'seller', 'buyer', 'winner', 'by', 'from', 'to']

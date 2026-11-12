@@ -13,9 +13,8 @@
     },
     {
       "version": "v3",
-      "note": "not filled in yet: needs the deployed addresses, the block of the first deploy tx, and abis/v3/*.json from the contracts session. Skipped while empty.",
-      "startBlock": null,
-      "contracts": {}
+      "note": "read from the repo-root deployments.json (deployBlock and contract addresses). abis/v3 are copies of the root abis/ files at the merge of feat/contracts-v3.",
+      "fromRoot": true
     }
   ]
 }

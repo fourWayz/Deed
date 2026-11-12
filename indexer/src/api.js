@@ -114,7 +114,7 @@ export function routes(db) {
     // newest first. Pass before=<block> to page.
     async activity(q) {
       const p = []
-      const where = [`contract <> 'PositionVault' or name in ('CollateralAdded','Repaid','Withdrawn','Closed','SurplusClaimed')`]
+      const where = [`contract <> 'PositionVault' or name in ('CollateralAdded','Repaid','Withdrawn','Borrowed','Refinanced','Closed','SurplusClaimed')`]
       // Transfer is noise on top of Listed/Sold/PositionCreated, so keep it out of the feed unless asked
       if (q.include !== 'transfers') where.push(`name <> 'Transfer'`)
       if (q.type) { p.push(q.type); where.push(`name = $${p.length}`) }
