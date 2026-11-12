@@ -86,6 +86,23 @@ Consequence for Deed: total debt moves every second, so the market snapshot must
   Recovery Mode while BorrowerOperations is on the MUSD mint list (`canMint`), and also needs the post-close
   TCR to stay >= CCR. Repaying and topping up collateral stay allowed.
 - Normal mode adjustments need new ICR >= MCR and new TCR >= CCR.
+
+### What Recovery Mode restricts (read from `BorrowerOperations.sol`, checked on the fork)
+
+| action | Recovery Mode | revert string |
+| --- | --- | --- |
+| `addColl` | allowed | |
+| `repayMUSD` | allowed | |
+| `withdrawColl` | blocked | `Collateral withdrawal not permitted Recovery Mode` |
+| `withdrawMUSD` | allowed only if the new ICR >= 150% **and** above the old ICR. A pure borrow lowers the ICR, so it always reverts | `Cannot decrease your Trove's ICR in Recovery Mode` |
+| `refinance` | blocked | `Operation not permitted during Recovery Mode` |
+| `closeTrove` | blocked while BorrowerOperations is on the MUSD mint list (`MUSD.mintList(BO)`, true on testnet); allowed otherwise, subject to the post-close TCR | `Operation not permitted during Recovery Mode` |
+| `openTrove` | needs ICR >= CCR, no borrowing fee | |
+| liquidation | no separate Recovery Mode branch, ICR < MCR only | |
+
+The vault turns the blocked ones into one clear error, `RecoveryModeActive`, before calling MUSD, and `DeedLens` exposes
+`canClose / canWithdraw / canBorrow / canRefinance`. `test_realMusd_recoveryModeBlocksMatchTheVaultErrors` calls the
+real BorrowerOperations as the vault and shows it refuses exactly what the vault refuses.
 - `maxBorrowingCapacity` is set at open to `coll * price / 1.1` and only goes down on collateral withdrawal;
   a debt increase must fit under it.
 
@@ -106,6 +123,36 @@ the first three already include pending), `checkRecoveryMode(price)`, `getTCR(pr
 Stored `getTroveColl` / `getTrovePrincipal` ignore pending rewards, which only change when the trove is
 touched, so they are stable between actions.
 
+### Pending redistribution, checked in `TroveManager.sol`
+
+When a trove is liquidated and the Stability Pool cannot absorb it, its collateral and debt are redistributed to every
+trove in proportion to stake. They are not written to each trove: `L_Collateral`, `L_Principal`, `L_Interest` grow and a
+trove's share is `stake * (L - snapshot)`.
+
+| view / operation | pending redistribution |
+| --- | --- |
+| `getTroveDebt` | **left out**: principal + interest owed + accrued interest, nothing else |
+| `getTroveColl`, `getTrovePrincipal` | left out (stored values) |
+| `getCurrentICR` | **included** (`_getCurrentTroveAmounts`) |
+| `getEntireDebtAndColl` | **included** in its first three outputs; the last three show the pending part |
+| `closeTrove` | first calls `updateSystemAndTroveInterest`, which applies the pending rewards, then burns `debt - 200e18` with the **entire** debt |
+| redemption | applies the pending rewards to each trove it touches before redeeming |
+
+So `getTroveDebt(vault) - 200e18` under-counts what `closeTrove` burns whenever a redistribution is pending, and a vault
+that pulled only that much would make `closeTrove` revert with `Caller doesnt have enough mUSD`. The vault now uses the
+entire debt from `getEntireDebtAndColl`. The market snapshot hashes the entire collateral and entire principal, which do
+not change when the pending rewards are applied, and every ICR in Deed (market, auction, lens, vault) is the entire ICR.
+Fork tests: `test/fork/V3Fork.t.sol`.
+
+### Surplus (`claimCollateral`), checked in `CollSurplusPool.sol` and `TroveManager.sol`
+
+`accountSurplus` is called in exactly one place, `_redeemCloseTrove`: a **redemption that takes a trove's whole net
+debt** closes it (`closedByRedemption`, status 4) and the remaining collateral waits in the `CollSurplusPool`. A
+**liquidation leaves no surplus** in this version, even though the comment on `claimCollateral` still mentions one.
+`claimCollateral()` sends the pool balance to `msg.sender` (the vault) and reverts with `No collateral available to
+claim` when there is none. The vault used to hide that revert with a `try/catch`; it now reverts `NothingToClaim`
+and exposes `surplus()`.
+
 ## Things that matter for the design
 
 1. The vault must be the only holder of the trove and must forward every payout. After a liquidation the
@@ -116,3 +163,11 @@ touched, so they are stable between actions.
    on a stale oracle, which is the safe failure.
 4. Mezo testnet has no price source besides this feed in the MUSD repo. A second (DEX) price needs its own
    adapter, see `docs/security.md`.
+
+## Tigris pool (the DEX price)
+
+The MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9` is a Velodrome fork. It exposes
+`observationLength()` (3,028 when checked), `observations(i)` (timestamp and cumulative reserves, written on a swap when
+at least `periodSize` = 1,800 s have passed) and `currentCumulativePrices()`. `PairTwapPrice` averages the reserves between
+the newest observation at least one hour old and now. The testnet pool lags the oracle: it was about 3.4% under it at the
+first deploy and about 8.8% over it (78.4k against 72.1k) when v3 was prepared, so it is not a usable 200 bps reference.
