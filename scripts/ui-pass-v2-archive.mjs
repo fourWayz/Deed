@@ -1,7 +1,7 @@
-// Browser pass for the v3 frontend, against the v2 deployment, in headless Chromium on Linux.
+// ARCHIVE: the first pass, run against the v2 deployment. It reads deployments.json as it was then and no longer runs. See ui-pass-v3-live.mjs.
 //   node --env-file=../Deed/.env scripts/ui-pass-v3.mjs   (frontend served on http://localhost:3111)
 // Wallets are bridged: the page gets a plain EIP-1193 provider and every signature happens here in Node. Keys are read
-// from the environment and never printed or sent to the page. Results go to docs/ui-pass-v3.json.
+// from the environment and never printed or sent to the page. Results go to docs/ui-pass-v3-on-v2.json.
 import fs from "node:fs";
 import { chromium } from "playwright-core";
 import {
@@ -372,12 +372,12 @@ async function main() {
   console.log(`\n${results.length - failed}/${results.length} passed, ${failed} failed`);
   console.log(`${txs.length} transactions sent`);
   const safeConsole = [...new Set(consoleErrors)].slice(0, 25);
-  fs.writeFileSync(new URL("../docs/ui-pass-v3.json", import.meta.url), JSON.stringify({ base: BASE, results, txs, consoleErrors: safeConsole }, null, 2));
+  fs.writeFileSync(new URL("../docs/ui-pass-v3-on-v2.json", import.meta.url), JSON.stringify({ base: BASE, results, txs, consoleErrors: safeConsole }, null, 2));
   if (safeConsole.length) console.log("console errors:\n" + safeConsole.join("\n"));
 }
 main().catch(async (e) => {
   console.error("pass crashed:", e.message.split("\n")[0]);
-  fs.writeFileSync(new URL("../docs/ui-pass-v3.json", import.meta.url), JSON.stringify({ base: BASE, results, txs, consoleErrors: [...new Set(consoleErrors)].slice(0, 25), crashed: e.message.split("\n")[0] }, null, 2));
+  fs.writeFileSync(new URL("../docs/ui-pass-v3-on-v2.json", import.meta.url), JSON.stringify({ base: BASE, results, txs, consoleErrors: [...new Set(consoleErrors)].slice(0, 25), crashed: e.message.split("\n")[0] }, null, 2));
   await browser?.close();
   process.exit(1);
 });
