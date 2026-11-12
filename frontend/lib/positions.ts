@@ -1,5 +1,5 @@
 import type { Address, PublicClient } from "viem";
-import { ADDR, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi, spotAbi, troveManagerAbi } from "./config";
+import { ADDR, LENS, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi, spotAbi, troveManagerAbi, surplusPoolAbi, musdAbi, lensAbi } from "./config";
 import { priceSourceInRange } from "./priceSource";
 
 export type Listing = { seller: Address; expiry: bigint; price: bigint; minICR: bigint; snapshot: `0x${string}` };
@@ -48,7 +48,8 @@ export type Snapshot = {
 };
 
 // Mezo Recovery Mode: total collateral ratio under 150%. active is null when the oracle was stale and it could not be read.
-export type RecoveryInfo = { active: boolean | null; tcr: bigint | null };
+// closeBlocked: Mezo refuses closeTrove in Recovery Mode while BorrowerOperations can still mint MUSD.
+export type RecoveryInfo = { active: boolean | null; tcr: bigint | null; closeBlocked: boolean };
 
 const MAX_POSITIONS = 60;
 
@@ -84,24 +85,56 @@ export async function loadPositions(client: PublicClient): Promise<Snapshot> {
     }
   }
 
-  let recovery: RecoveryInfo = { active: null, tcr: null };
-  if (price !== null) {
-    try {
-      const [active, tcr] = await Promise.all([
-        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "checkRecoveryMode", args: [price] }),
-        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getTCR", args: [price] }),
-      ]);
-      recovery = { active, tcr };
-    } catch {
-      // unknown, the contracts still enforce Mezo's rules
-    }
-  }
+  const recovery = await loadRecovery(client, price);
 
   const ids: bigint[] = [];
   for (let i = last; i >= first; i--) ids.push(BigInt(i));
 
   const positions = await Promise.all(ids.map((id) => loadOne(client, id, price)));
   return { positions, price, rescueICR, safeICR, minFloorBps, priceSourceOk, recovery };
+}
+
+/** Recovery Mode and TCR. Uses DeedLens.system() when an address is configured, otherwise reads TroveManager the same way. */
+async function loadRecovery(client: PublicClient, price: bigint | null): Promise<RecoveryInfo> {
+  if (price === null) return { active: null, tcr: null, closeBlocked: false };
+  let active: boolean | null = null;
+  let tcr: bigint | null = null;
+  if (LENS !== ZERO) {
+    try {
+      const sys = await client.readContract({ address: LENS, abi: lensAbi, functionName: "system" });
+      if (!sys[3]) {
+        active = sys[2];
+        tcr = sys[1];
+      }
+    } catch {
+      // fall through to the direct read
+    }
+  }
+  if (active === null) {
+    try {
+      [active, tcr] = await Promise.all([
+        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "checkRecoveryMode", args: [price] }),
+        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getTCR", args: [price] }),
+      ]);
+    } catch {
+      return { active: null, tcr: null, closeBlocked: false };
+    }
+  }
+  let closeBlocked = false;
+  if (active) {
+    try {
+      closeBlocked = await client.readContract({ address: ADDR.musd, abi: musdAbi, functionName: "mintList", args: [ADDR.borrowerOperations] });
+    } catch {
+      closeBlocked = true; // cannot tell, assume Mezo refuses
+    }
+  }
+  return { active, tcr, closeBlocked };
+}
+
+/** Collateral waiting in Mezo's CollSurplusPool for a vault after a liquidation or redemption. */
+export async function loadSurplus(client: PublicClient, vault: Address): Promise<bigint> {
+  const pool = await client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "collSurplusPool" });
+  return client.readContract({ address: pool, abi: surplusPoolAbi, functionName: "getCollateral", args: [vault] });
 }
 
 async function loadOne(client: PublicClient, id: bigint, price: bigint | null): Promise<Position> {
