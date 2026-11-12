@@ -1,38 +1,66 @@
 # Deed
 
-A Mezo MUSD loan is stuck to the wallet that opened it, so you can't sell a healthy position or hand a risky one to
-someone who will rescue it. Deed puts each loan in its own vault and makes control of that vault an NFT you can sell.
+A Mezo MUSD loan is stuck to the wallet that opened it. If you want out of a healthy position you have to repay it and
+close it, and if a position is drifting toward liquidation nobody can step in and save it for you. Deed puts each loan in
+its own vault and makes control of that vault an NFT, so the position itself can be sold, and a risky one can be handed
+to someone who will rescue it.
 
-**Live demo:** [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app)
+- **Track:** Mezo Buildathon, Mezo testnet (chain id 31611). TODO: exact track name from the AKINDO listing.
+- **Who it is for:**
+  - Borrowers who want to cash out of a healthy MUSD position without closing it, or get out of a risky one for a fair price.
+  - Buyers who want an existing position (its BTC and its debt) instead of opening a new one.
+  - Rescuers who want to take on a position close to liquidation, add BTC and keep the spread.
+  - Builders who want a position feed and an SDK to build on (Wave 2, see below).
 
-Built for the Mezo Buildathon. Mezo testnet, chain id 31611.
+## What is new in Wave 2
 
-## Try it in 3 steps
+Wave 1 is deployed and tested (see the address table and [docs/demo.md](docs/demo.md)). Wave 2 is being built on
+separate branches and **none of it is deployed yet**, so nothing below is claimed as live.
 
-1. **Open the live app and connect.** Go to https://frontend-iota-blush-70.vercel.app and connect a wallet on Mezo
-   testnet (chain id 31611) with test BTC from the [Mezo faucet](https://faucet.test.mezo.org/).
-2. **Open a position.** On My Positions, open one, for example 0.04 BTC against 1,800 MUSD.
-3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
-   auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
-   full live run (`node --env-file=.env scripts/e2e.mjs` repeats it).
+| Piece | Branch | State today |
+| --- | --- | --- |
+| Capped fee on sales and rescues, paid to an immutable treasury (cap 1%, no owner, no way to change it) | `feat/contracts-v3` | Written in the working tree, uncommitted. Not deployed. TODO: fee value chosen at deploy, tests, deployment tx. |
+| Time-weighted DEX price guard (`PairTwapPrice`) and a read-only `DeedLens` contract | `feat/contracts-v3` | Files exist, uncommitted. Not deployed. TODO: tests, deployment tx. |
+| Indexer for positions, listings, auctions and fees | `feat/indexer` | ABIs and config only, no data. TODO: running indexer, URL, numbers. |
+| Keeper that starts rescues and ends expired auctions | `feat/keeper` | TODO: nothing committed yet. |
+| SDK and MCP server | `feat/sdk-mcp` | TODO: nothing committed yet. |
+| Frontend v2 | `feat/frontend-v2` | TODO: nothing committed yet. |
 
-### Run locally
+How the fee would work and why it is capped: [docs/business-model.md](docs/business-model.md).
 
-`cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the contract addresses are
-already filled in), then `npm install && npm run dev`.
+## Live links
+
+- Live app: [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app) (Wave 1 contracts)
+- Code: [github.com/fourWayz/Deed](https://github.com/fourWayz/Deed)
+- Explorer: [explorer.test.mezo.org](https://explorer.test.mezo.org/)
+- Demo video: TODO
+- Indexer / API: TODO
+- Pitch outline, video script, submission text: [docs/pitch-outline.md](docs/pitch-outline.md),
+  [docs/video-script.md](docs/video-script.md), [docs/submission-wave2.md](docs/submission-wave2.md)
 
 ## Deployed addresses
 
 Mezo testnet (31611), deployed with `script/Deploy.s.sol` in one broadcast with `DeedNFT.init` included, built for the
-london EVM. Deploy transactions: [docs/demo.md](docs/demo.md) and `deployments.json`.
+london EVM. This is the Wave 1 deployment and it has **no fee**. Deploy transactions: [docs/demo.md](docs/demo.md) and
+`deployments.json`.
 
-| Contract | Address | Source (Sourcify) |
-| --- | --- | --- |
-| DeedNFT | [`0x848063cbD0230B6A4345311Ec090FDb51F49b681`](https://explorer.test.mezo.org/address/0x848063cbD0230B6A4345311Ec090FDb51F49b681) | [exact match](https://repo.sourcify.dev/31611/0x848063cbD0230B6A4345311Ec090FDb51F49b681) |
-| DeedFactory | [`0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc`](https://explorer.test.mezo.org/address/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) | [exact match](https://repo.sourcify.dev/31611/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) |
-| DeedMarket | [`0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99`](https://explorer.test.mezo.org/address/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) | [exact match](https://repo.sourcify.dev/31611/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) |
-| RescueAuction | [`0x190fB7559BB8023ecAA7c90CFcC17187042B89F9`](https://explorer.test.mezo.org/address/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) | [exact match](https://repo.sourcify.dev/31611/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) |
-| PairSpotPrice (DEX guard) | [`0xc8978277f2BCe7c06F9612d457c12B24F364Ec24`](https://explorer.test.mezo.org/address/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) | [exact match](https://repo.sourcify.dev/31611/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) |
+| Contract | Address | Explorer | Source (Sourcify) |
+| --- | --- | --- | --- |
+| DeedNFT | `0x848063cbD0230B6A4345311Ec090FDb51F49b681` | [explorer](https://explorer.test.mezo.org/address/0x848063cbD0230B6A4345311Ec090FDb51F49b681) | [exact match](https://repo.sourcify.dev/31611/0x848063cbD0230B6A4345311Ec090FDb51F49b681) |
+| DeedFactory | `0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc` | [explorer](https://explorer.test.mezo.org/address/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) | [exact match](https://repo.sourcify.dev/31611/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc) |
+| DeedMarket | `0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99` | [explorer](https://explorer.test.mezo.org/address/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) | [exact match](https://repo.sourcify.dev/31611/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99) |
+| RescueAuction | `0x190fB7559BB8023ecAA7c90CFcC17187042B89F9` | [explorer](https://explorer.test.mezo.org/address/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) | [exact match](https://repo.sourcify.dev/31611/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9) |
+| PairSpotPrice (DEX guard) | `0xc8978277f2BCe7c06F9612d457c12B24F364Ec24` | [explorer](https://explorer.test.mezo.org/address/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) | [exact match](https://repo.sourcify.dev/31611/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24) |
+
+Wave 2 contracts (TODO: addresses appear here only after a deployment is broadcast and the transactions are in
+`deployments.json`):
+
+| Contract | Address | Explorer | Source (Sourcify) |
+| --- | --- | --- | --- |
+| DeedMarket (with fee) | TODO | TODO | TODO |
+| RescueAuction (with fee) | TODO | TODO | TODO |
+| PairTwapPrice | TODO | TODO | TODO |
+| DeedLens | TODO | TODO | TODO |
 
 The DEX guard reads the live Tigris MUSD/BTC volatile pool `0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9`. No mock price source
 is used. Existing MUSD contracts used (checked on chain): MUSD `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`,
@@ -41,6 +69,19 @@ PriceFeed `0x86bCF0841622a5dAC14A313a15f96A95421b9366`.
 
 An earlier deployment is still on chain and is superseded, do not use it. It is listed under `previousDeployment` in
 `deployments.json` and in [docs/first-deployment/](docs/first-deployment/README.md).
+
+## Quick start
+
+1. **Open the live app and connect.** Go to https://frontend-iota-blush-70.vercel.app and connect a wallet on Mezo
+   testnet (chain id 31611) with test BTC from the [Mezo faucet](https://faucet.test.mezo.org/).
+2. **Open a position.** On My Positions, open one, for example 0.04 BTC against 1,800 MUSD.
+3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
+   auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
+   full live run (`node --env-file=.env scripts/e2e.mjs` repeats it).
+
+Run the frontend locally: `cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the
+contract addresses are already filled in), then `npm install && npm run dev`. Run the contract tests: see
+[Develop](#develop).
 
 ### Verification
 
@@ -111,7 +152,7 @@ flowchart LR
 
 ## Security model
 
-- No owner, no fee, no pause, no upgrade. The deployer calls `DeedNFT.init` once to register the factory and venues.
+- No owner, no pause, no upgrade, and no fee on the Wave 1 deployment (the Wave 2 fee is capped and immutable, see docs/business-model.md). The deployer calls `DeedNFT.init` once to register the factory and venues.
 - A sale reverts if collateral, principal, rate or the promised minimum ICR changed since the buyer looked, and if
   live ICR from the Mezo `PriceFeed` is below the promise at settlement.
 - Payments are credited and pulled. Reentrancy guards plus checks-effects-interactions, tested with a hook token.
