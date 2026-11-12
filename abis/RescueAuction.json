@@ -1,0 +1,817 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "deed_",
+        "type": "address",
+        "internalType": "contract DeedNFT"
+      },
+      {
+        "name": "factory_",
+        "type": "address",
+        "internalType": "contract DeedFactory"
+      },
+      {
+        "name": "troveManager_",
+        "type": "address",
+        "internalType": "contract ITroveManager"
+      },
+      {
+        "name": "priceFeed_",
+        "type": "address",
+        "internalType": "contract IPriceFeed"
+      },
+      {
+        "name": "spotSource_",
+        "type": "address",
+        "internalType": "contract IPriceSource"
+      },
+      {
+        "name": "musd_",
+        "type": "address",
+        "internalType": "contract IMUSD"
+      },
+      {
+        "name": "rescueICR_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "safeICR_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDeviationBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "treasury_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "feeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_FLOOR_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "GAS_COMPENSATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_FEE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MCR",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_FLOOR_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "auctions",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "seller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "byOwner",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "start",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "duration",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "startPrice",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "floorPrice",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "bid",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxPrice",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "upperHint",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "lowerHint",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "cancel",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claim",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimable",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "currentPrice",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract DeedNFT"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "end",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "equityOf",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "factory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract DeedFactory"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feeFor",
+    "inputs": [
+      {
+        "name": "price",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxDeviationBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "musd",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMUSD"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "priceFeed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IPriceFeed"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "requiredTopUp",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rescueICR",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "safeICR",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "spotSource",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IPriceSource"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "start",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "floorBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "duration",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "startRescue",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "topUp",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "upperHint",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "lowerHint",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "treasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "troveManager",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ITroveManager"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "Claimed",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Ended",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Started",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "seller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "byOwner",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "startPrice",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "floorPrice",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "duration",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Won",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "seller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "winner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "price",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "fee",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "topUp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AlreadyRunning",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BadParams",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Expired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Healthy",
+    "inputs": [
+      {
+        "name": "icr",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rescueICR",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NoEquity",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotRunning",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotSeller",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToClaim",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PriceTooHigh",
+    "inputs": [
+      {
+        "name": "price",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "Reentrancy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SpotDeviation",
+    "inputs": [
+      {
+        "name": "oracle",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "spot",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "StillRisky",
+    "inputs": [
+      {
+        "name": "icr",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "safeICR",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TransferFailed",
+    "inputs": []
+  }
+]

@@ -10,7 +10,8 @@ import {PositionVault} from "./PositionVault.sol";
 /// @notice Dutch auction for positions close to liquidation.
 /// The price falls linearly from the position's equity to a floor. The winner pays MUSD to the old
 /// owner and must add enough BTC in the same transaction to leave the position above `safeICR`.
-/// No owner, no fee, no admin functions.
+/// The fee is a fixed share of the winning price, set at deploy, capped at 1%, paid to an immutable treasury.
+/// No owner, no admin functions, nothing that can change the fee or the treasury.
 contract RescueAuction {
     uint256 public constant MCR = 1.1e18;
     uint256 public constant GAS_COMPENSATION = 200e18;
@@ -21,6 +22,7 @@ contract RescueAuction {
     uint256 public constant DEFAULT_FLOOR_BPS = 8_000;
     // no auction, owner started or not, may fall below this share of the equity
     uint256 public constant MIN_FLOOR_BPS = 8_000;
+    uint256 public constant MAX_FEE_BPS = 100;
 
     struct Auction {
         address seller;
@@ -43,6 +45,9 @@ contract RescueAuction {
     uint256 public immutable safeICR;
     // largest gap allowed between the Mezo oracle and the DEX price
     uint256 public immutable maxDeviationBps;
+    // share of the winning price, in basis points, and who receives it
+    uint256 public immutable feeBps;
+    address public immutable treasury;
 
     mapping(uint256 => Auction) public auctions;
     mapping(address => uint256) public claimable;
@@ -69,8 +74,8 @@ contract RescueAuction {
 
     event Started(uint256 indexed tokenId, address indexed seller, bool byOwner, uint256 startPrice, uint256 floorPrice, uint64 duration);
     event Ended(uint256 indexed tokenId, address indexed by);
-    event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 topUp);
-    event Claimed(address indexed seller, uint256 amount);
+    event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 fee, uint256 topUp);
+    event Claimed(address indexed account, uint256 amount);
 
     modifier nonReentrant() {
         if (_status != 1) revert Reentrancy();
@@ -88,11 +93,18 @@ contract RescueAuction {
         IMUSD musd_,
         uint256 rescueICR_,
         uint256 safeICR_,
-        uint256 maxDeviationBps_
+        uint256 maxDeviationBps_,
+        address treasury_,
+        uint256 feeBps_
     ) {
-        if (rescueICR_ <= MCR || safeICR_ <= rescueICR_ || maxDeviationBps_ == 0 || maxDeviationBps_ > 5_000) {
+        if (
+            rescueICR_ <= MCR || safeICR_ <= rescueICR_ || maxDeviationBps_ == 0 || maxDeviationBps_ > 5_000
+                || treasury_ == address(0) || feeBps_ > MAX_FEE_BPS
+        ) {
             revert BadParams();
         }
+        treasury = treasury_;
+        feeBps = feeBps_;
         deed = deed_;
         factory = factory_;
         troveManager = troveManager_;
@@ -198,7 +210,10 @@ contract RescueAuction {
         if (status != 1) revert NotActive();
 
         delete auctions[tokenId];
-        claimable[a.seller] += price;
+        // the fee rounds down, and the seller gets the rest, so the two always add up to the price
+        uint256 fee = feeFor(price);
+        claimable[a.seller] += price - fee;
+        if (fee > 0) claimable[treasury] += fee;
 
         if (!musd.transferFrom(msg.sender, address(this), price)) revert TransferFailed();
         if (msg.value > 0) vault.topUpFromVenue{value: msg.value}(upperHint, lowerHint);
@@ -208,7 +223,7 @@ contract RescueAuction {
         if (icr < safeICR) revert StillRisky(icr, safeICR);
 
         deed.settle(tokenId, msg.sender);
-        emit Won(tokenId, a.seller, msg.sender, price, msg.value);
+        emit Won(tokenId, a.seller, msg.sender, price, fee, msg.value);
     }
 
     function claim() external nonReentrant {
@@ -228,6 +243,11 @@ contract RescueAuction {
         uint256 elapsed = block.timestamp - a.start;
         if (elapsed >= a.duration) return a.floorPrice;
         return a.startPrice - (a.startPrice - a.floorPrice) * elapsed / a.duration;
+    }
+
+    /// @notice The fee taken from a winning price. The seller receives `price - feeFor(price)`.
+    function feeFor(uint256 price) public view returns (uint256) {
+        return price * feeBps / 10_000;
     }
 
     /// @notice BTC needed to bring the position to `safeICR` at the oracle price (0 if already there).
