@@ -22,6 +22,18 @@ interface IRealTroveManager is ITroveManager {
     function getPendingDebt(address borrower) external view returns (uint256, uint256);
 }
 
+interface IHintHelpers {
+    function computeNominalCR(uint256 coll, uint256 debt) external pure returns (uint256);
+    function getApproxHint(uint256 nicr, uint256 numTrials, uint256 seed)
+        external
+        view
+        returns (address hint, uint256 diff, uint256 latestRandomSeed);
+}
+
+interface ISortedTroves {
+    function findInsertPosition(uint256 nicr, address upper, address lower) external view returns (address, address);
+}
+
 interface IRealBorrowerOperations is IBorrowerOperations {
     function stabilityPoolAddress() external view returns (address);
     function refinancingFeePercentage() external view returns (uint8);
@@ -36,6 +48,8 @@ contract V3ForkTest is Test {
     IRealTroveManager constant TM = IRealTroveManager(0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0);
     IPriceFeed constant PF = IPriceFeed(0x86bCF0841622a5dAC14A313a15f96A95421b9366);
     IMUSD constant MUSD = IMUSD(0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503);
+    IHintHelpers constant HH = IHintHelpers(0x4e4cBA3779d56386ED43631b4dCD6d8EacEcBCF6);
+    ISortedTroves constant SORTED = ISortedTroves(0x722E4D24FD6Ff8b0AC679450F3D91294607268fA);
 
     DeedNFT deed;
     DeedFactory factory;
@@ -45,7 +59,7 @@ contract V3ForkTest is Test {
     receive() external payable {}
 
     function setUp() public {
-        vm.createSelectFork("mezo_testnet");
+        vm.createSelectFork("mezo_testnet", 16_736_371);
         _price(80_000e18);
         deed = new DeedNFT();
         factory = new DeedFactory(deed, BO, TM, PF, MUSD);
@@ -58,9 +72,19 @@ contract V3ForkTest is Test {
         vm.mockCall(address(PF), abi.encodeWithSelector(IPriceFeed.fetchPrice.selector), abi.encode(p));
     }
 
+    /// A trove near 110% sits at the tail of a list of hundreds, and without hints SortedTroves walks all of it
+    /// and runs out of gas. Same lookup the app and scripts/e2e-v3.mjs do.
+    function _hints(uint256 coll, uint256 debt) internal view returns (address upper, address lower) {
+        uint256 principal = debt + debt * BO.borrowingRate() / 1e18 + 200e18;
+        uint256 nicr = HH.computeNominalCR(coll, principal);
+        (address hint,,) = HH.getApproxHint(nicr, 300, 42);
+        return SORTED.findInsertPosition(nicr, hint, hint);
+    }
+
     function _open(uint256 coll, uint256 debt) internal returns (uint256 id, PositionVault v) {
+        (address up, address low) = _hints(coll, debt);
         vm.prank(alice);
-        (uint256 tokenId, address vault) = factory.createPosition{value: coll}(debt, address(0), address(0));
+        (uint256 tokenId, address vault) = factory.createPosition{value: coll}(debt, up, low);
         return (tokenId, PositionVault(payable(vault)));
     }
 
@@ -70,7 +94,8 @@ contract V3ForkTest is Test {
     /// redistributed over every trove, the vault's included
     function _redistributeTo(PositionVault vault) internal {
         // 3 BTC at 80k is 240k. 216,000 of debt is about 111% before the fee and gas compensation
-        BO.openTrove{value: 3 ether}(215_500e18, address(0), address(0));
+        (address up, address low) = _hints(3 ether, 215_500e18);
+        BO.openTrove{value: 3 ether}(215_500e18, up, low);
         // the pool absorbs nothing, and the price falls far enough for the trove to be under 110%
         vm.mockCall(BO.stabilityPoolAddress(), abi.encodeWithSignature("getTotalMUSDDeposits()"), abi.encode(uint256(0)));
         _price(70_000e18);

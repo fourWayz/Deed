@@ -88,6 +88,14 @@ contract FeeInvariantTest is V3Base {
 
     function setUp() public override {
         h = new FeeHandler();
+        // only the handler's actions: its inherited setUp() would rebuild the market and strand the ledger
+        bytes4[] memory selectors = new bytes4[](5);
+        selectors[0] = FeeHandler.list.selector;
+        selectors[1] = FeeHandler.buy.selector;
+        selectors[2] = FeeHandler.cancel.selector;
+        selectors[3] = FeeHandler.claim.selector;
+        selectors[4] = FeeHandler.time.selector;
+        targetSelector(FuzzSelector({addr: address(h), selectors: selectors}));
         targetContract(address(h));
     }
 
