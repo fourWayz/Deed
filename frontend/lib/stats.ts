@@ -3,6 +3,8 @@ import { ADDR, START_BLOCK, eventsAbi } from "./config";
 
 export type Activity = {
   kind: "opened" | "listed" | "sold" | "auction" | "won";
+  // deployment the event belongs to, only the indexer reports it. Anything but the current version is an earlier deployment.
+  version?: string;
   tokenId: bigint;
   block: bigint;
   tx: `0x${string}`;
@@ -13,7 +15,15 @@ export type Activity = {
   fee: bigint;
 };
 
+export type Earlier = { version: string; positions: number; volume: bigint; fees: bigint };
+
 export type Stats = {
+  // where the numbers came from: the indexer (every deployment) or a scan of this deployment's events
+  source: "indexer" | "chain";
+  // history of earlier deployments, only the indexer has it
+  earlier: Earlier[];
+  // the indexer answered but has not indexed this deployment yet, so the current numbers were counted from chain
+  indexerBehind?: boolean;
   positions: number;
   volume: bigint;
   fees: bigint;
@@ -79,7 +89,7 @@ export async function scanActivity(client: PublicClient, onProgress?: (done: num
       fees += a.fee;
     }
   }
-  return { positions, volume, fees, wallets: wallets.size, sales, rescues, recent: out.slice(0, 12), fromBlock: from, toBlock: head };
+  return { source: "chain", earlier: [], positions, volume, fees, wallets: wallets.size, sales, rescues, recent: out.slice(0, 12), fromBlock: from, toBlock: head };
 }
 
 function toActivity(l: { topics: readonly `0x${string}`[]; data: `0x${string}`; blockNumber: bigint; transactionHash: `0x${string}` }): Activity | null {
@@ -98,11 +108,11 @@ function toActivity(l: { topics: readonly `0x${string}`[]; data: `0x${string}`; 
     case "Listed":
       return { ...base, kind: "listed", tokenId, wallets: [a.seller as Address], amount: 0n, fee: 0n };
     case "Sold":
-      return { ...base, kind: "sold", tokenId, wallets: [a.seller as Address, a.buyer as Address], amount: a.price as bigint, fee: (a.fee as bigint | undefined) ?? 0n };
+      return { ...base, kind: "sold", tokenId, wallets: [a.seller as Address, a.buyer as Address], amount: a.price as bigint, fee: a.fee as bigint };
     case "Started":
       return { ...base, kind: "auction", tokenId, wallets: [a.seller as Address], amount: 0n, fee: 0n };
     case "Won":
-      return { ...base, kind: "won", tokenId, wallets: [a.seller as Address, a.winner as Address], amount: a.price as bigint, fee: (a.fee as bigint | undefined) ?? 0n };
+      return { ...base, kind: "won", tokenId, wallets: [a.seller as Address, a.winner as Address], amount: a.price as bigint, fee: a.fee as bigint };
   }
   return null;
 }

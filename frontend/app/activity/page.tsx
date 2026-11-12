@@ -1,10 +1,10 @@
 "use client";
 
 import { useStats } from "@/lib/useStats";
-import { deployed, EXPLORER } from "@/lib/config";
+import { CURRENT_VERSION, deployed, EXPLORER } from "@/lib/config";
 import { fmtMUSD, short } from "@/lib/format";
 import type { Activity } from "@/lib/stats";
-import { ErrorBox, NotDeployed, Skeletons, Stat } from "@/components/ui";
+import { ErrorBox, NotDeployed, Skeletons, Stat, StatsSource } from "@/components/ui";
 
 const LABEL: Record<Activity["kind"], string> = {
   opened: "Position opened",
@@ -44,10 +44,10 @@ export default function ActivityPage() {
               <Stat k="Fixed price sales" v={s.sales.toLocaleString()} />
               <Stat k="Rescues won" v={s.rescues.toLocaleString()} />
             </div>
-            <div className="muted" style={{ fontSize: 12.5 }}>
-              Volume is MUSD paid in sales and won auctions. Blocks {s.fromBlock.toString()} to {s.toBlock.toString()}
-              {isFetching ? ", refreshing…" : ""}.
+            <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+              Volume is MUSD paid in sales and won auctions{isFetching ? ", refreshing…" : ""}.
             </div>
+            <StatsSource s={s} indexerDown={s.indexerDown} />
           </div>
 
           <h2>Recent transactions</h2>
@@ -58,6 +58,7 @@ export default function ActivityPage() {
                 <div className="feed-row" key={`${a.tx}-${a.kind}-${a.tokenId}`}>
                   <div>
                     <b>{LABEL[a.kind]}</b>
+                    {a.version && a.version !== CURRENT_VERSION && <span className="pill" style={{ marginLeft: 8 }}>earlier deployment</span>}
                     <div className="muted" style={{ fontSize: 12.5 }}>
                       Deed #{a.tokenId.toString()} · {a.wallets.map(short).join(" → ")}
                     </div>

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
 import type { PublicClient } from "viem";
 import { ADDR, auctionAbi, deployed, EXPLORER } from "@/lib/config";
 import { usePositions, useNow } from "@/lib/usePositions";
+import { loadPending } from "@/lib/positions";
 import { fmtBTC, fmtDuration, fmtMUSD, fmtPct, fmtRate, parseAmount, short } from "@/lib/format";
 import { getHints } from "@/lib/hints";
 import { useTx } from "@/lib/useTx";
@@ -59,7 +61,14 @@ export default function PositionPage() {
   const p = data?.positions.find((x) => x.id === id);
   const mine = p && address && p.owner.toLowerCase() === address.toLowerCase();
   const endAuction = useTx(refresh);
+  const pending = useQuery({
+    queryKey: ["pending", p?.vault],
+    enabled: !!p && p.status === 1,
+    refetchInterval: 20_000,
+    queryFn: () => loadPending(client, p!.vault),
+  });
   const writeContractAsync = useSafeWrite();
+  const client = usePublicClient() as PublicClient;
 
   return (
     <>
@@ -68,7 +77,7 @@ export default function PositionPage() {
       {isLoading && <Skeletons n={1} />}
       {error && <ErrorBox error={error} retry={() => refetch()} />}
       {data && !p && <div className="glass empty">This Deed is not in the latest {60} positions or does not exist.</div>}
-      {data && <RecoveryBanner recovery={data.recovery} />}
+      {data && <RecoveryBanner system={data.system} canClose={p?.status === 1 ? p.can.close : undefined} />}
 
       {data && p && (
         <div className="stack" style={{ gap: 22 }}>
@@ -84,15 +93,15 @@ export default function PositionPage() {
                 <div className="breakdown">
                   <div>
                     <span>Borrowed (principal)</span>
-                    <b>{fmtMUSD(p.principal)}</b>
+                    <b>{pending.data === undefined ? "…" : fmtMUSD(p.principal - pending.data.principal)}</b>
                   </div>
                   <div>
                     <span>Interest so far ({fmtRate(p.rate)} a year)</span>
-                    <b>{fmtMUSD(p.interest)}</b>
+                    <b>{pending.data === undefined ? "…" : fmtMUSD(p.interest - pending.data.interest)}</b>
                   </div>
                   <div>
                     <span>Pending from other liquidations</span>
-                    <b>{fmtMUSD(p.pendingDebt)}</b>
+                    <b>{pending.data === undefined ? "…" : fmtMUSD(pending.data.principal + pending.data.interest)}</b>
                   </div>
                   <div className="muted">
                     <span>of which Mezo's 200 MUSD gas deposit, paid back on close</span>
@@ -100,7 +109,7 @@ export default function PositionPage() {
                   </div>
                 </div>
                 <div className="muted" style={{ fontSize: 12.5 }}>
-                  Collateral {fmtBTC(p.liveColl)}, implied equity {p.equity === null ? "n/a" : fmtMUSD(p.equity)}.
+                  Collateral {fmtBTC(p.collateral)}, implied equity {p.equity === null ? "n/a" : fmtMUSD(p.equity)}.
                 </div>
               </div>
             </div>
@@ -134,7 +143,7 @@ export default function PositionPage() {
           )}
 
           {p.auction && mine && !p.auction.byOwner && (
-            <SellerAuctionTools id={p.id} coll={p.coll} principal={p.principal} onDone={refresh} />
+            <SellerAuctionTools id={p.id} coll={p.collateral} principal={p.principal} onDone={refresh} />
           )}
 
           {p.auction && now >= Number(p.auction.start + p.auction.duration) && (
@@ -151,7 +160,7 @@ export default function PositionPage() {
             </div>
           )}
 
-          <ManagePanel p={p} safeICR={data.safeICR} minFloorBps={data.minFloorBps} recovery={data.recovery} price={data.price} onDone={refresh} />
+          <ManagePanel p={p} safeICR={data.safeICR} minFloorBps={data.minFloorBps} price={data.price} onDone={refresh} />
         </div>
       )}
     </>

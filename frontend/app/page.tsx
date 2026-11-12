@@ -4,7 +4,9 @@ import Link from "next/link";
 import { fmtMUSD } from "@/lib/format";
 import { deployed } from "@/lib/config";
 import { useStats } from "@/lib/useStats";
-import { Reveal, Skeletons, Stat } from "@/components/ui";
+import { Reveal, Skeletons, Stat, StatsSource } from "@/components/ui";
+import { useFeeTerms } from "@/lib/fees";
+import { EXPLORER } from "@/lib/config";
 import { Video } from "@/components/Video";
 
 const audience = [
@@ -23,12 +25,13 @@ const steps = [
 const rules = [
   ["Strangers start rescues only under 120% ICR.", "Liquidation is at 110%, so a stranger can only act inside that 10 point band. The holder can start one at any ratio."],
   ["Every auction floor is at least 80% of equity.", "Nobody, owner included, can be tricked into a near-zero sale."],
-  ["The oracle prices, the DEX only guards.", "Every amount comes from the Mezo price feed. The DEX price is compared with it and the call reverts if they disagree."],
+  ["The oracle prices, the DEX only guards.", "Every amount comes from the Mezo price feed. A time-weighted DEX price is compared with it and the call reverts if they disagree."],
   ["A listing or auction freezes the vault for everyone.", "While a venue holds the Deed the holder cannot change the position under a buyer's feet."],
 ];
 
 export default function Landing() {
   const stats = useStats();
+  const terms = useFeeTerms();
   const s = stats.data;
   return (
     <>
@@ -97,8 +100,8 @@ export default function Landing() {
             <Stat k="Fees paid" v={fmtMUSD(s.fees)} />
             <Stat k="Unique wallets" v={s.wallets.toLocaleString()} />
           </div>
-          <div className="muted" style={{ fontSize: 12.5 }}>
-            Read from chain events, blocks {s.fromBlock.toString()} to {s.toBlock.toString()}.{" "}
+          <StatsSource s={s} indexerDown={stats.data!.indexerDown} />
+          <div style={{ fontSize: 12.5, marginTop: 6 }}>
             <Link href="/activity" style={{ textDecoration: "underline" }}>
               Full activity
             </Link>
@@ -125,8 +128,22 @@ export default function Landing() {
       <h2 className="section">Fees</h2>
       <div className="glass stack" style={{ gap: 8 }}>
         <div>
-          <b>Deed's fee:</b> read from the contract at the moment of a sale and shown to you before you sign. The current
-          deployment charges none.
+          <b>Deed's fee:</b>{" "}
+          {terms.data ? (
+            <>
+              {(Number(terms.data.market) / 100).toFixed(2)}% of the sale price on a fixed price sale and{" "}
+              {(Number(terms.data.auction) / 100).toFixed(2)}% on a rescue auction, read from the contracts. The seller receives the
+              price minus the fee and the fee goes to the treasury{" "}
+              <a className="mono" href={`${EXPLORER}/address/${terms.data.treasury}`} target="_blank" rel="noreferrer">
+                {terms.data.treasury.slice(0, 6)}…{terms.data.treasury.slice(-4)}
+              </a>
+              . The contracts cap it at 1%, and you see the exact amount before you sign.
+            </>
+          ) : terms.isError ? (
+            "could not be read from the contracts right now. You see the exact amount before you sign."
+          ) : (
+            "reading it from the contracts…"
+          )}
         </div>
         <div className="muted" style={{ fontSize: 14 }}>
           Mezo's own charges still apply: a 0.1% borrowing fee when you borrow, 1% a year simple interest at today's rate, and a

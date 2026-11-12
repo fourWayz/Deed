@@ -1,5 +1,5 @@
 import type { Address, PublicClient } from "viem";
-import { ADDR, LENS, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi, spotAbi, troveManagerAbi, surplusPoolAbi, musdAbi, lensAbi } from "./config";
+import { ADDR, ZERO, deedAbi, marketAbi, auctionAbi, spotAbi, lensAbi, troveManagerAbi } from "./config";
 import { priceSourceInRange } from "./priceSource";
 
 export type Listing = { seller: Address; expiry: bigint; price: bigint; minICR: bigint; snapshot: `0x${string}` };
@@ -12,29 +12,32 @@ export type AuctionInfo = {
   floorPrice: bigint;
 };
 
+// DeedLens status codes: 0 none, 1 active, 2 closed by the holder, 3 liquidated, 4 closed by a redemption
 export type Position = {
   id: bigint;
   vault: Address;
   owner: Address;
   lockedBy: Address;
   status: number;
-  // stored numbers, these are what the market snapshot hashes
-  coll: bigint;
+  // entire collateral and principal (pending redistribution included), these are what the market snapshot hashes
+  collateral: bigint;
   principal: bigint;
   rate: number;
-  // live numbers with interest and pending rewards
-  liveColl: bigint;
-  // entire debt: principal plus accrued interest plus pending redistribution, this is what ICR is measured against
+  // principal plus accrued interest plus pending redistribution, what the ICR is measured against
   debt: bigint;
-  // accrued interest on this trove, without pending rewards
   interest: bigint;
-  // the part of the entire debt that came from other liquidations and is not stored on the trove yet
-  pendingDebt: bigint;
   icr: bigint | null;
   equity: bigint | null;
+  // collateral Mezo is holding for this vault after a redemption closed the whole trove
+  surplus: bigint;
+  // what Mezo allows right now, from DeedLens. A listing or auction can still freeze the vault on top of this.
+  can: { close: boolean; withdraw: boolean; borrow: boolean; refinance: boolean };
   listing: Listing | null;
   auction: AuctionInfo | null;
 };
+
+// Recovery Mode is a system total collateral ratio under 150%. stale means the oracle was older than 60 seconds.
+export type SystemInfo = { recovery: boolean; tcr: bigint | null; stale: boolean };
 
 export type Snapshot = {
   positions: Position[];
@@ -45,12 +48,8 @@ export type Snapshot = {
   minFloorBps: bigint;
   // false when the DEX price is further from the oracle than the auction allows, null when it could not be checked
   priceSourceOk: boolean | null;
-  recovery: RecoveryInfo;
+  system: SystemInfo;
 };
-
-// Mezo Recovery Mode: total collateral ratio under 150%. active is null when the oracle was stale and it could not be read.
-// closeBlocked: Mezo refuses closeTrove in Recovery Mode while BorrowerOperations can still mint MUSD.
-export type RecoveryInfo = { active: boolean | null; tcr: bigint | null; closeBlocked: boolean };
 
 const MAX_POSITIONS = 60;
 
@@ -59,18 +58,15 @@ export async function loadPositions(client: PublicClient): Promise<Snapshot> {
   const last = Number(next) - 1;
   const first = Math.max(1, last - MAX_POSITIONS + 1);
 
-  let price: bigint | null = null;
-  try {
-    price = await client.readContract({ address: ADDR.priceFeed, abi: priceFeedAbi, functionName: "fetchPrice" });
-  } catch {
-    // the oracle reverts when it is stale
-  }
-
-  const [rescueICR, safeICR, minFloorBps] = await Promise.all([
+  const [sys, rescueICR, safeICR, minFloorBps] = await Promise.all([
+    client.readContract({ address: ADDR.lens, abi: lensAbi, functionName: "system" }),
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "rescueICR" }),
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "safeICR" }),
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "MIN_FLOOR_BPS" }),
   ]);
+  const [lensPrice, tcr, recovery, stale] = sys;
+  const price = stale ? null : lensPrice;
+  const system: SystemInfo = { recovery: !stale && recovery, tcr: stale ? null : tcr, stale };
 
   let priceSourceOk: boolean | null = null;
   if (price !== null) {
@@ -86,106 +82,49 @@ export async function loadPositions(client: PublicClient): Promise<Snapshot> {
     }
   }
 
-  const recovery = await loadRecovery(client, price);
-
   const ids: bigint[] = [];
   for (let i = last; i >= first; i--) ids.push(BigInt(i));
-
-  const positions = await Promise.all(ids.map((id) => loadOne(client, id, price)));
-  return { positions, price, rescueICR, safeICR, minFloorBps, priceSourceOk, recovery };
+  const positions = await Promise.all(ids.map((id) => loadOne(client, id)));
+  return { positions, price, rescueICR, safeICR, minFloorBps, priceSourceOk, system };
 }
 
-/** Recovery Mode and TCR. Uses DeedLens.system() when an address is configured, otherwise reads TroveManager the same way. */
-async function loadRecovery(client: PublicClient, price: bigint | null): Promise<RecoveryInfo> {
-  if (price === null) return { active: null, tcr: null, closeBlocked: false };
-  let active: boolean | null = null;
-  let tcr: bigint | null = null;
-  if (LENS !== ZERO) {
-    try {
-      const sys = await client.readContract({ address: LENS, abi: lensAbi, functionName: "system" });
-      if (!sys[3]) {
-        active = sys[2];
-        tcr = sys[1];
-      }
-    } catch {
-      // fall through to the direct read
-    }
-  }
-  if (active === null) {
-    try {
-      [active, tcr] = await Promise.all([
-        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "checkRecoveryMode", args: [price] }),
-        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getTCR", args: [price] }),
-      ]);
-    } catch {
-      return { active: null, tcr: null, closeBlocked: false };
-    }
-  }
-  let closeBlocked = false;
-  if (active) {
-    try {
-      closeBlocked = await client.readContract({ address: ADDR.musd, abi: musdAbi, functionName: "mintList", args: [ADDR.borrowerOperations] });
-    } catch {
-      closeBlocked = true; // cannot tell, assume Mezo refuses
-    }
-  }
-  return { active, tcr, closeBlocked };
-}
-
-/** Collateral waiting in Mezo's CollSurplusPool for a vault after a liquidation or redemption. */
-export async function loadSurplus(client: PublicClient, vault: Address): Promise<bigint> {
-  const pool = await client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "collSurplusPool" });
-  return client.readContract({ address: pool, abi: surplusPoolAbi, functionName: "getCollateral", args: [vault] });
-}
-
-async function loadOne(client: PublicClient, id: bigint, price: bigint | null): Promise<Position> {
-  const [owner, lockedBy, vault, listing, auction] = await Promise.all([
-    client.readContract({ address: ADDR.deed, abi: deedAbi, functionName: "ownerOf", args: [id] }),
-    client.readContract({ address: ADDR.deed, abi: deedAbi, functionName: "lockedBy", args: [id] }),
-    client.readContract({ address: ADDR.factory, abi: factoryAbi, functionName: "vaultOf", args: [id] }),
+async function loadOne(client: PublicClient, id: bigint): Promise<Position> {
+  const [v, listing, auction] = await Promise.all([
+    client.readContract({ address: ADDR.lens, abi: lensAbi, functionName: "position", args: [id] }),
     client.readContract({ address: ADDR.market, abi: marketAbi, functionName: "listings", args: [id] }),
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "auctions", args: [id] }),
   ]);
-  const [trove, live, entire] = await Promise.all([
-    client.readContract({ address: vault, abi: vaultAbi, functionName: "troveState" }),
-    client.readContract({ address: vault, abi: vaultAbi, functionName: "liveState" }),
-    client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getEntireDebtAndColl", args: [vault] }),
-  ]);
-  const [status, coll, principal, rate] = trove;
-  const [liveColl, debt] = live;
-  // entire[2] already includes pending interest, so the accrued part on its own is the difference
-  const interest = entire[2] - entire[5];
-  const pendingDebt = entire[4] + entire[5];
-
-  let icr: bigint | null = null;
-  let equity: bigint | null = null;
-  if (price !== null && status === 1 && debt > 0n) {
-    icr = (liveColl * price) / debt;
-    const value = (liveColl * price) / 10n ** 18n;
-    const owed = debt - GAS_COMP;
-    equity = value > owed ? value - owed : 0n;
-  }
-
   const [lSeller, expiry, lPrice, minICR, snapshot] = listing;
   const [aSeller, byOwner, start, duration, startPrice, floorPrice] = auction;
+  const active = v.status === 1;
   return {
     id,
-    vault,
-    owner,
-    lockedBy,
-    status,
-    coll,
-    principal,
-    rate,
-    liveColl,
-    debt,
-    interest,
-    pendingDebt,
-    icr,
-    equity,
+    vault: v.vault,
+    owner: v.holder,
+    lockedBy: v.lockedBy,
+    status: v.status,
+    collateral: v.collateral,
+    principal: v.principal,
+    rate: v.rate,
+    debt: v.debt,
+    interest: v.interest,
+    // the lens answers 0 when the oracle is stale, that is "no reading", not a ratio of zero
+    icr: active && !v.priceStale ? v.icr : null,
+    equity: active && !v.priceStale ? v.equity : null,
+    surplus: v.surplus,
+    can: { close: v.canClose, withdraw: v.canWithdraw, borrow: v.canBorrow, refinance: v.canRefinance },
     listing: lSeller === ZERO ? null : { seller: lSeller, expiry, price: lPrice, minICR, snapshot },
     auction: aSeller === ZERO ? null : { seller: aSeller, byOwner, start, duration, startPrice, floorPrice },
   };
+}
+
+/**
+ * The part of the lens's principal and interest that came from other liquidations and is not stored on the trove yet.
+ * Only the position page needs it, to split the entire debt into what was borrowed, interest and pending.
+ */
+export async function loadPending(client: PublicClient, vault: Address): Promise<{ principal: bigint; interest: bigint }> {
+  const e = await client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getEntireDebtAndColl", args: [vault] });
+  return { principal: e[4], interest: e[5] };
 }
 
 /** Price the auction asks right now, same linear formula as the contract. */

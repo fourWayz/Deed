@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
-import type { PublicClient } from "viem";
+import { parseAbi, type PublicClient } from "viem";
 import { useQuery } from "@tanstack/react-query";
-import { ADDR, auctionAbi, factoryAbi, marketAbi, vaultAbi, vaultV3Abi, MCR, VAULT_HAS_BORROW, GAS_COMP } from "@/lib/config";
+import { ADDR, auctionAbi, factoryAbi, marketAbi, vaultAbi, MCR, GAS_COMP } from "@/lib/config";
 import { ensureAllowance, snapshotHash } from "@/lib/actions";
 import { getHints } from "@/lib/hints";
-import { auctionPriceAt, loadSurplus, type Position, type RecoveryInfo } from "@/lib/positions";
+import { auctionPriceAt, type Position } from "@/lib/positions";
 import { useFee } from "@/lib/fees";
 import { FeeLine } from "./FeeLine";
-import { BlockedNote, blockedFor } from "./RecoveryBanner";
-import { fmtBTC, fmtMUSD, fmtPct, parseAmount } from "@/lib/format";
+import { BlockedNote } from "./RecoveryBanner";
+import { fmtBTC, fmtMUSD, fmtPct, fmtRate, parseAmount } from "@/lib/format";
 import { useTx } from "@/lib/useTx";
 import { useSafeWrite } from "@/lib/useSafeWrite";
 import { TxButton } from "./ui";
@@ -147,7 +147,7 @@ export function BidButton({
           });
           // 1% extra so a small price move between quote and mining does not revert
           const topUp = needed + needed / 100n + 1n;
-          const hints = await getHints(client, p.liveColl + topUp, p.principal);
+          const hints = await getHints(client, p.collateral + topUp, p.principal);
           await ensureAllowance(client, (x) => write(x), address!, ADDR.auction, price, wait);
           return write({
             address: ADDR.auction,
@@ -185,20 +185,19 @@ export function ManagePanel({
   p,
   safeICR,
   minFloorBps,
-  recovery,
   price,
   onDone,
 }: {
   p: Position;
   safeICR: bigint;
   minFloorBps: bigint;
-  recovery?: RecoveryInfo;
   price: bigint | null;
   onDone: () => void;
 }) {
   const { address, client, write } = useWallet();
   const [amount, setAmount] = useState("");
-  const blocked = blockedFor(recovery);
+  // what Mezo refuses right now, straight from DeedLens (Recovery Mode, stale oracle)
+  const blocked = { withdraw: !p.can.withdraw, close: !p.can.close, borrow: !p.can.borrow, refinance: !p.can.refinance };
   const minFloorPct = Number(minFloorBps) / 100;
   const [floor, setFloor] = useState(String(minFloorPct));
   const [hours, setHours] = useState("12");
@@ -209,7 +208,6 @@ export function ManagePanel({
   const close = useTx(onDone);
   const auction = useTx(onDone);
   const claim = useTx(onDone);
-  const surplus = useQuery({ queryKey: ["surplus", p.vault], enabled: p.status !== 1, queryFn: () => loadSurplus(client, p.vault) });
 
   const amt = parseAmount(amount);
   const floorNum = Number(floor);
@@ -220,24 +218,25 @@ export function ManagePanel({
   const mine = address && p.owner.toLowerCase() === address.toLowerCase();
   if (!mine) return <div className="glass muted">Connect the wallet that holds this Deed to manage it.</div>;
   if (p.status !== 1) {
-    const amt0 = surplus.data ?? 0n;
+    const amt0 = p.surplus;
     return (
       <div className="glass stack">
-        <h2>{p.status === 3 ? "Liquidated" : "Closed"}</h2>
-        <div className="muted">
-          {surplus.isLoading
-            ? "Checking for surplus collateral…"
-            : surplus.error
-              ? "Could not check for surplus collateral. Try again in a moment."
-              : amt0 > 0n
-                ? `Mezo is holding ${fmtBTC(amt0)} of surplus collateral for this vault. Claiming sends it to your wallet.`
-                : "There is no surplus collateral waiting for this vault."}
-        </div>
+        <h2>{p.status === 3 ? "Liquidated" : p.status === 4 ? "Closed by a redemption" : "Closed"}</h2>
+        {amt0 > 0n ? (
+          <div className="muted">
+            Mezo is holding {fmtBTC(amt0)} of collateral left over from this position. Claiming sends it to your wallet.
+          </div>
+        ) : (
+          <div className="notice" style={{ marginBottom: 0 }}>
+            <b>Nothing to claim.</b> Leftover collateral only exists after a redemption closes the whole position, and Mezo is
+            holding none for this one.
+          </div>
+        )}
         <TxButton
           label={amt0 > 0n ? `Claim ${fmtBTC(amt0)}` : "Claim surplus"}
           variant="ghost"
           state={claim.state}
-          disabled={!amt0}
+          disabled={amt0 === 0n}
           onClick={() => claim.run(() => write({ address: p.vault, abi: vaultAbi, functionName: "claimSurplus" }))}
         />
       </div>
@@ -247,7 +246,7 @@ export function ManagePanel({
   const vaultCall = async (fn: "addCollateral" | "withdraw") => {
     if (!amt) throw new Error("Enter an amount");
     if (fn === "addCollateral") {
-      const hints = await getHints(client, p.coll + amt, p.principal);
+      const hints = await getHints(client, p.collateral + amt, p.principal);
       return write({
         address: p.vault,
         abi: vaultAbi,
@@ -256,7 +255,7 @@ export function ManagePanel({
         value: amt,
       });
     }
-    const hints = await getHints(client, p.coll - amt, p.principal);
+    const hints = await getHints(client, p.collateral - amt, p.principal);
     return write({ address: p.vault, abi: vaultAbi, functionName: "withdraw", args: [amt, hints.upper, hints.lower] });
   };
 
@@ -295,7 +294,7 @@ export function ManagePanel({
             disabled={locked || !amt}
             onClick={() =>
               repay.run(async (wait) => {
-                const hints = await getHints(client, p.coll, p.principal - amt!);
+                const hints = await getHints(client, p.collateral, p.principal - amt!);
                 await ensureAllowance(client, (x) => write(x), address!, p.vault, amt!, wait);
                 return write({
                   address: p.vault,
@@ -322,7 +321,7 @@ export function ManagePanel({
           />
         </div>
         <div className="muted" style={{ fontSize: 12.5 }}>
-          Closing needs {fmtMUSD(p.debt - GAS_COMP)} in your wallet. Collateral now {fmtBTC(p.liveColl)}.
+          Closing needs {fmtMUSD(p.debt - GAS_COMP)} in your wallet. Collateral now {fmtBTC(p.collateral)}.
         </div>
         {(blocked.withdraw || blocked.close) && (
           <BlockedNote>
@@ -333,7 +332,7 @@ export function ManagePanel({
         )}
       </div>
 
-      <BorrowPanel p={p} blocked={blocked.borrow} price={price} onDone={onDone} />
+      <BorrowPanel p={p} blockedBorrow={blocked.borrow} blockedRefinance={blocked.refinance} locked={locked} price={price} onDone={onDone} />
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
         <ListForm p={p} locked={locked} price={price} onDone={onDone} />
@@ -460,7 +459,21 @@ export function ListForm({ p, locked, price, onDone }: { p: Position; locked: bo
 
 // --- borrow more and refinance ---
 
-export function BorrowPanel({ p, blocked, price, onDone }: { p: Position; blocked: boolean; price: bigint | null; onDone: () => void }) {
+export function BorrowPanel({
+  p,
+  blockedBorrow,
+  blockedRefinance,
+  locked,
+  price,
+  onDone,
+}: {
+  p: Position;
+  blockedBorrow: boolean;
+  blockedRefinance: boolean;
+  locked: boolean;
+  price: bigint | null;
+  onDone: () => void;
+}) {
   const { address, client, write } = useWallet();
   const [amount, setAmount] = useState("");
   const borrow = useTx(onDone);
@@ -471,25 +484,17 @@ export function BorrowPanel({ p, blocked, price, onDone }: { p: Position; blocke
     queryFn: () =>
       client.readContract({
         address: ADDR.borrowerOperations,
-        abi: [{ type: "function", name: "borrowingRate", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }] as const,
+        abi: parseAbi(["function borrowingRate() view returns (uint256)"]),
         functionName: "borrowingRate",
       }),
   });
   // the fee is added to the debt, so it counts against the new ICR too
   const fee = amt && rate.data !== undefined ? (amt * rate.data) / 10n ** 18n : null;
   const newDebt = amt && fee !== null ? p.debt + amt + fee : null;
-  const newIcr = newDebt && price ? (p.liveColl * price) / newDebt : null;
-  const unavailable = !VAULT_HAS_BORROW;
-  const off = unavailable || blocked;
+  const newIcr = newDebt && price ? (p.collateral * price) / newDebt : null;
   return (
     <div className="glass stack">
       <h2>Borrow more and refinance</h2>
-      {unavailable && (
-        <div className="notice" style={{ marginBottom: 0 }}>
-          The vault behind this Deed (the v2 deployment) has no borrow or refinance function, so these two stay off here. They
-          switch on with the v3 vault.
-        </div>
-      )}
       <div>
         <label>Borrow more (MUSD)</label>
         <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0.0" />
@@ -508,11 +513,11 @@ export function BorrowPanel({ p, blocked, price, onDone }: { p: Position; blocke
         <TxButton
           label="Borrow"
           state={borrow.state}
-          disabled={off || !address || !amt || (newIcr !== null && newIcr < MCR)}
+          disabled={locked || blockedBorrow || !address || !amt || (newIcr !== null && newIcr < MCR)}
           onClick={() =>
             borrow.run(async () => {
-              const hints = await getHints(client, p.liveColl, p.principal + amt!);
-              return write({ address: p.vault, abi: vaultV3Abi, functionName: "borrow", args: [amt!, hints.upper, hints.lower] });
+              const hints = await getHints(client, p.collateral, p.principal + amt!);
+              return write({ address: p.vault, abi: vaultAbi, functionName: "borrow", args: [amt!, hints.upper, hints.lower] });
             })
           }
         />
@@ -520,18 +525,19 @@ export function BorrowPanel({ p, blocked, price, onDone }: { p: Position; blocke
           label="Refinance to current rate"
           variant="ghost"
           state={refi.state}
-          disabled={off || !address}
+          disabled={locked || blockedRefinance || !address}
           onClick={() =>
             refi.run(async () => {
-              const hints = await getHints(client, p.liveColl, p.principal);
-              return write({ address: p.vault, abi: vaultV3Abi, functionName: "refinance", args: [hints.upper, hints.lower] });
+              const hints = await getHints(client, p.collateral, p.principal);
+              return write({ address: p.vault, abi: vaultAbi, functionName: "refinance", args: [hints.upper, hints.lower] });
             })
           }
         />
       </div>
-      {blocked && !unavailable && <BlockedNote />}
+      {(blockedBorrow || blockedRefinance) && <BlockedNote />}
       <div className="muted" style={{ fontSize: 12.5 }}>
-        Refinancing moves the position to today's interest rate; Mezo charges a fee that is added to the debt.
+        The borrowed MUSD goes to your wallet. Refinancing moves the position to today's interest rate; Mezo charges a fee that is
+        added to the debt. Your rate now: {fmtRate(p.rate)}.
       </div>
     </div>
   );

@@ -9,9 +9,9 @@ export const ADDR = {
   factory: env(process.env.NEXT_PUBLIC_FACTORY),
   market: env(process.env.NEXT_PUBLIC_MARKET),
   auction: env(process.env.NEXT_PUBLIC_AUCTION),
+  lens: env(process.env.NEXT_PUBLIC_LENS),
   // Mezo testnet, checked on chain (docs/mezo-notes.md)
   musd: "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503" as Address,
-  priceFeed: "0x86bCF0841622a5dAC14A313a15f96A95421b9366" as Address,
   troveManager: "0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0" as Address,
   borrowerOperations: "0xCdF7028ceAB81fA0C6971208e83fa7872994beE5" as Address,
   hintHelpers: "0x4e4cBA3779d56386ED43631b4dCD6d8EacEcBCF6" as Address,
@@ -19,20 +19,21 @@ export const ADDR = {
 };
 
 export const ZERO = zero;
-export const deployed = ADDR.deed !== zero && ADDR.factory !== zero && ADDR.market !== zero && ADDR.auction !== zero;
+export const deployed =
+  ADDR.deed !== zero && ADDR.factory !== zero && ADDR.market !== zero && ADDR.auction !== zero && ADDR.lens !== zero;
 export const EXPLORER = "https://explorer.test.mezo.org";
 export const FAUCET = "https://faucet.test.mezo.org/";
+export const GAS_COMP = 200n * 10n ** 18n;
+export const MCR = 11n * 10n ** 17n;
 
 // mp4 file or Vimeo player url for the landing page, empty shows the placeholder
 export const VIDEO_URL = process.env.NEXT_PUBLIC_DEMO_VIDEO ?? "";
-// block the contracts were deployed at, event scans start here (RPC allows 10,000 blocks per request)
+// block this deployment was created at, the chain scan behind the activity page starts here (RPC allows 10,000 blocks per request)
 export const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_START_BLOCK ?? "0");
-// optional DeedLens address, when set the system view (price, TCR, Recovery Mode) comes from it
-export const LENS = env(process.env.NEXT_PUBLIC_LENS);
-// true once the vault in use has borrow and refinance and the venues have feeFor (v3). The v2 contracts have none of them.
-export const VAULT_HAS_BORROW = process.env.NEXT_PUBLIC_VAULT_V3 === "1";
-export const GAS_COMP = 200n * 10n ** 18n;
-export const MCR = 11n * 10n ** 17n;
+// name the indexer gives the deployment this app is built for, every other version it reports is an earlier deployment
+export const CURRENT_VERSION = process.env.NEXT_PUBLIC_DEPLOYMENT_VERSION ?? "v3";
+// base url of the indexer api. Empty or unreachable means the activity page counts events from the chain itself.
+export const INDEXER_URL = (process.env.NEXT_PUBLIC_INDEXER_URL ?? "").replace(/\/+$/, "");
 
 export const deedAbi = parseAbi([
   "function nextId() view returns (uint256)",
@@ -58,7 +59,12 @@ export const vaultAbi = parseAbi([
   "function withdraw(uint256 amount, address upperHint, address lowerHint)",
   "function close()",
   "function claimSurplus()",
+  "function surplus() view returns (uint256)",
+  "function borrow(uint256 amount, address upperHint, address lowerHint)",
+  "function refinance(address upperHint, address lowerHint)",
   "error NotController()",
+  "error RecoveryModeActive()",
+  "error NothingToClaim()",
   "error NotOpen()",
   "error AlreadyOpened()",
   "error Reentrancy()",
@@ -72,6 +78,10 @@ export const marketAbi = parseAbi([
   "function cancel(uint256 tokenId)",
   "function buy(uint256 tokenId, bytes32 expectedSnapshot, uint256 maxPrice)",
   "function claim()",
+  "function feeBps() view returns (uint256)",
+  "function feeFor(uint256 price) view returns (uint256)",
+  "function treasury() view returns (address)",
+  "error BadParams()",
   "error NotOwner()",
   "error NotListed()",
   "error AlreadyListed()",
@@ -107,6 +117,9 @@ export const auctionAbi = parseAbi([
   "function end(uint256 tokenId)",
   "function bid(uint256 tokenId, uint256 maxPrice, address upperHint, address lowerHint) payable",
   "function claim()",
+  "function feeBps() view returns (uint256)",
+  "function feeFor(uint256 price) view returns (uint256)",
+  "error BadParams()",
   "error NotOwner()",
   "error NotSeller()",
   "error NotRunning()",
@@ -127,31 +140,21 @@ export const auctionAbi = parseAbi([
 ]);
 
 export const troveManagerAbi = parseAbi([
-  "function checkRecoveryMode(uint256 price) view returns (bool)",
-  "function getTCR(uint256 price) view returns (uint256)",
-  "function collSurplusPool() view returns (address)",
   "function getEntireDebtAndColl(address borrower) view returns (uint256 coll, uint256 principal, uint256 interest, uint256 pendingColl, uint256 pendingPrincipal, uint256 pendingInterest)",
+  "function getTroveStatus(address borrower) view returns (uint256)",
 ]);
 
-export const surplusPoolAbi = parseAbi(["function getCollateral(address) view returns (uint256)"]);
-export const musdAbi = parseAbi(["function mintList(address) view returns (bool)"]);
 export const lensAbi = parseAbi([
+  "function position(uint256 tokenId) view returns ((address vault, address holder, address lockedBy, uint8 status, uint256 collateral, uint256 principal, uint256 interest, uint256 debt, uint256 icr, uint16 rate, uint256 collateralValue, uint256 equity, uint256 surplus, uint256 price, uint256 tcr, bool recoveryMode, bool priceStale, bool canClose, bool canWithdraw, bool canBorrow, bool canRefinance))",
   "function system() view returns (uint256 price, uint256 tcr, bool recoveryMode, bool priceStale)",
-]);
-export const feeAbi = parseAbi(["function feeFor(uint256 price) view returns (uint256)"]);
-// only present on the v3 vault
-export const vaultV3Abi = parseAbi([
-  "function borrow(uint256 amount, address upperHint, address lowerHint)",
-  "function refinance(address upperHint, address lowerHint)",
+  "error UnknownDeed()",
 ]);
 
 export const eventsAbi = parseAbi([
   "event PositionCreated(uint256 indexed tokenId, address indexed vault, address indexed owner, uint256 collateral, uint256 debt)",
   "event Listed(uint256 indexed tokenId, address indexed seller, uint256 price, uint64 expiry, uint256 minICR, bytes32 snapshot)",
-  "event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price)",
   "event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price, uint256 fee)",
   "event Started(uint256 indexed tokenId, address indexed seller, bool byOwner, uint256 startPrice, uint256 floorPrice, uint64 duration)",
-  "event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 topUp)",
   "event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 fee, uint256 topUp)",
 ]);
 
@@ -162,8 +165,6 @@ export const erc20Abi = parseAbi([
 ]);
 
 export const spotAbi = parseAbi(["function spotPrice() view returns (uint256)"]);
-
-export const priceFeedAbi = parseAbi(["function fetchPrice() view returns (uint256)"]);
 
 export const hintHelpersAbi = parseAbi([
   "function getApproxHint(uint256 cr, uint256 numTrials, uint256 inputRandomSeed) view returns (address hintAddress, uint256 diff, uint256 latestRandomSeed)",

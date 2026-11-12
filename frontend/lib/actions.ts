@@ -7,7 +7,7 @@ export function snapshotHash(p: Position, minICR: bigint): `0x${string}` {
   return keccak256(
     encodeAbiParameters(
       [{ type: "uint256" }, { type: "uint256" }, { type: "uint16" }, { type: "uint256" }],
-      [p.coll, p.principal, p.rate, minICR],
+      [p.collateral, p.principal, p.rate, minICR],
     ),
   );
 }

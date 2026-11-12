@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { animate, stagger } from "animejs";
 import { EXPLORER } from "@/lib/config";
-import { cleanMessage } from "@/lib/format";
+import { cleanMessage, fmtMUSD } from "@/lib/format";
 import type { TxState } from "@/lib/useTx";
 
 /** Fades children in with a small stagger when they first show up. */
@@ -147,6 +147,28 @@ export function NotDeployed() {
     <div className="notice">
       Deed contract addresses are not configured. Copy <span className="mono">frontend/.env.example</span> to{" "}
       <span className="mono">.env.local</span> and fill in the deployed addresses.
+    </div>
+  );
+}
+
+/** Says where stats came from and labels the earlier deployment's share, used on the landing and activity pages. */
+export function StatsSource({ s, indexerDown }: { s: import("@/lib/stats").Stats; indexerDown: boolean }) {
+  return (
+    <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+      {s.source === "indexer" ? (
+        <>Totals come from the Deed indexer, across every deployment it follows.</>
+      ) : (
+        <>
+          Counted from this deployment's chain events, blocks {s.fromBlock.toString()} to {s.toBlock.toString()}.
+          {indexerDown && " The indexer did not answer, so earlier deployments are not included."}
+          {s.indexerBehind && " The indexer has not indexed this deployment yet, so only the earlier history below comes from it."}
+        </>
+      )}
+      {s.earlier.map((e) => (
+        <div key={e.version}>
+          Earlier deployment ({e.version}): {e.positions.toLocaleString()} positions, {fmtMUSD(e.volume)} volume, {fmtMUSD(e.fees)} fees.
+        </div>
+      ))}
     </div>
   );
 }

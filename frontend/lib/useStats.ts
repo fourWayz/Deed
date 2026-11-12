@@ -4,22 +4,46 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePublicClient } from "wagmi";
 import type { PublicClient } from "viem";
-import { deployed } from "./config";
-import { scanActivity } from "./stats";
+import { INDEXER_URL, deployed } from "./config";
+import { scanActivity, type Stats } from "./stats";
+import { fetchIndexerStats } from "./indexer";
 
-/** Totals and recent activity read from chain events, cached so the landing and activity pages share one scan. */
+export type StatsResult = Stats & {
+  // set when an indexer is configured but could not be used, so the page can say the numbers are the fallback
+  indexerDown: boolean;
+};
+
+/**
+ * Totals and recent activity. The indexer when NEXT_PUBLIC_INDEXER_URL is set and answering, otherwise a scan of this
+ * deployment's own events on chain. Cached so the landing and activity pages share one read.
+ */
 export function useStats() {
   const client = usePublicClient();
   const [progress, setProgress] = useState(0);
   const query = useQuery({
-    queryKey: ["stats"],
+    queryKey: ["stats", INDEXER_URL],
     enabled: deployed && !!client,
     staleTime: 120_000,
     refetchInterval: 120_000,
     retry: 1,
-    queryFn: async () => {
+    queryFn: async (): Promise<StatsResult> => {
+      let down = false;
+      let earlier: Stats["earlier"] = [];
+      let behind = false;
+      if (INDEXER_URL) {
+        try {
+          const { hasCurrent, ...fromApi } = await fetchIndexerStats();
+          if (hasCurrent) return { ...fromApi, indexerDown: false };
+          // it follows the earlier deployments but not this one: keep its history, count this deployment from chain
+          earlier = fromApi.earlier;
+          behind = true;
+        } catch {
+          down = true;
+        }
+      }
       setProgress(0);
-      return scanActivity(client as PublicClient, (d, t) => setProgress(d / t));
+      const s = await scanActivity(client as PublicClient, (d, t) => setProgress(d / t));
+      return { ...s, earlier, indexerBehind: behind, indexerDown: down };
     },
   });
   return { ...query, progress };

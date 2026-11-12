@@ -48,6 +48,8 @@ const FRIENDLY: Record<string, string> = {
   StillRisky: "That top-up is too small. The position would still be too close to liquidation.",
   SpotDeviation: PRICE_SOURCE_MESSAGE,
   NotAllowed: "A rescue someone else started can only be cancelled once the position is back above the rescue line. Add collateral first.",
+  RecoveryModeActive: "Mezo is in Recovery Mode, which switches this action off until the system recovers.",
+  NothingToClaim: "Nothing to claim.",
   NotController: "This position is locked by a listing or auction, or you do not hold its Deed.",
   Locked: "This Deed is locked by a listing or auction.",
   AlreadyLocked: "This Deed is already in a listing or auction.",
@@ -60,11 +62,10 @@ const FRIENDLY: Record<string, string> = {
   NotOwner: "Only the Deed holder can do this.",
   NotSeller: "Only the seller can do this right now.",
   NotActive: "The trove behind this Deed is closed or liquidated.",
-  NothingToClaim: "Nothing to claim.",
   BadMinICR: "The promised minimum ICR must be at least 110% and no higher than the position has now.",
   BadExpiry: "The expiry has to be in the future.",
   BadPrice: "The price has to be above zero.",
-  BadParams: "Those auction settings are outside the allowed range.",
+  BadParams: "Those settings are outside what the contract allows.",
 };
 
 export function errMessage(e: unknown): string {

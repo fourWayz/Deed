@@ -13,7 +13,7 @@ export function icrTone(icr: bigint | null, rescueICR: bigint): "good" | "warn" 
 }
 
 export function StatusPill({ p }: { p: Position }) {
-  if (p.status !== 1) return <span className="pill bad">{p.status === 3 ? "liquidated" : "closed"}</span>;
+  if (p.status !== 1) return <span className="pill bad">{p.status === 3 ? "liquidated" : p.status === 4 ? "redeemed" : "closed"}</span>;
   if (p.auction) return <span className="pill warn">in rescue auction</span>;
   if (p.listing) return <span className="pill">listed</span>;
   return <span className="pill good">open</span>;
@@ -43,7 +43,7 @@ export function PositionCard({
         owner {short(p.owner)}
       </div>
       <div className="stats">
-        <Stat k="Collateral" v={fmtBTC(p.liveColl)} />
+        <Stat k="Collateral" v={fmtBTC(p.collateral)} />
         <Stat k="Debt" v={fmtMUSD(p.debt)} />
         <Stat k="ICR" v={<span className={`pill ${tone}`}>{fmtPct(p.icr)}</span>} />
         <Stat k="Rate" v={fmtRate(p.rate)} />
