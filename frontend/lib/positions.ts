@@ -26,6 +26,7 @@ export type Position = {
   liveColl: bigint;
   // entire debt: principal plus accrued interest plus pending redistribution, this is what ICR is measured against
   debt: bigint;
+  // accrued interest on this trove, without pending rewards
   interest: bigint;
   // the part of the entire debt that came from other liquidations and is not stored on the trove yet
   pendingDebt: bigint;
@@ -152,7 +153,8 @@ async function loadOne(client: PublicClient, id: bigint, price: bigint | null): 
   ]);
   const [status, coll, principal, rate] = trove;
   const [liveColl, debt] = live;
-  const interest = entire[2];
+  // entire[2] already includes pending interest, so the accrued part on its own is the difference
+  const interest = entire[2] - entire[5];
   const pendingDebt = entire[4] + entire[5];
 
   let icr: bigint | null = null;

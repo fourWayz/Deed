@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const links = [
-  { href: "/", label: "My Positions" },
+  { href: "/", label: "Home" },
+  { href: "/positions", label: "Positions" },
   { href: "/market", label: "Market" },
   { href: "/rescue", label: "Rescue" },
+  { href: "/activity", label: "Activity" },
 ];
 
 export function Nav() {
@@ -19,7 +21,7 @@ export function Nav() {
       </Link>
       <div className="links">
         {links.map((l) => {
-          const active = l.href === "/" ? path === "/" || path.startsWith("/position") : path.startsWith(l.href);
+          const active = l.href === "/" ? path === "/" : l.href === "/positions" ? path.startsWith("/position") : path.startsWith(l.href);
           return (
             <Link key={l.href} href={l.href} className={active ? "active" : ""}>
               {l.label}
