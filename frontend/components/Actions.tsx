@@ -394,7 +394,8 @@ export function ManagePanel({
 export function ListForm({ p, locked, price, onDone }: { p: Position; locked: boolean; price: bigint | null; onDone: () => void }) {
   const { write } = useWallet();
   const [listPrice, setListPrice] = useState("");
-  const [minICR, setMinICR] = useState("150");
+  // start from 150% but never above what the position has now, the contract rejects a promise it cannot keep
+  const [minICR, setMinICR] = useState(() => (p.icr === null ? "150" : String(Math.max(110, Math.min(150, Math.floor(Number(p.icr) / 1e16))))));
   const [days, setDays] = useState("3");
   const list = useTx(onDone);
   const parsed = parseAmount(listPrice);

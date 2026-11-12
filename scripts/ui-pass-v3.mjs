@@ -221,8 +221,9 @@ async function main() {
   const down = await session("empty");
   await down.route(RPC_GLOB, (route) => route.abort());
   await down.goto(BASE + "/market", { waitUntil: "domcontentloaded" });
-  await down.getByRole("alert").first().waitFor({ timeout: 90000 });
-  const errText = await down.getByRole("alert").first().innerText();
+  // Next.js keeps its own empty role=alert route announcer on every page, so pick the app's error box by class
+  await down.locator(".notice.err").first().waitFor({ timeout: 90000 });
+  const errText = await down.locator(".notice.err").first().innerText();
   step("RPC down: Market shows a readable error with Retry", /Could not load positions/.test(errText) && !RAW_SELECTOR.test(errText) && (await down.getByRole("button", { name: "Retry" }).count()) > 0, errText.replace(/\s+/g, " ").slice(0, 140));
   await shot(down, "error-rpc-down");
 

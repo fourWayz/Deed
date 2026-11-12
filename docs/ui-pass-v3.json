@@ -72,6 +72,11 @@
       "detail": ""
     },
     {
+      "name": "RPC down: Market shows a readable error with Retry",
+      "ok": true,
+      "detail": "Could not load positions: HTTP request failed. Retry"
+    },
+    {
       "name": "landing shows problem sentence",
       "ok": true,
       "detail": ""
@@ -139,7 +144,7 @@
     {
       "name": "position page: entire debt matches TroveManager (within accrual since the read)",
       "ok": true,
-      "detail": "ui 2002.84, chain 2002.8371"
+      "detail": "ui 2002.84, chain 2002.8378"
     },
     {
       "name": "debt breakdown rows add up to the entire debt",
@@ -197,11 +202,6 @@
       "detail": ""
     },
     {
-      "name": "leftover listing from an earlier run cleared from the UI",
-      "ok": true,
-      "detail": "Done. view transaction"
-    },
-    {
       "name": "list Deed #2 from the UI",
       "ok": true,
       "detail": "Done. view transaction"
@@ -228,12 +228,7 @@
     },
     {
       "name": "wizard, holder: step 2 done, step 3 shows the list form",
-      "ok": false,
-      "detail": ""
-    },
-    {
-      "name": "RPC down: Market shows a readable error with Retry",
-      "ok": false,
+      "ok": true,
       "detail": ""
     }
   ],
@@ -241,24 +236,19 @@
     {
       "who": "holder",
       "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
-      "selector": "0x40e58ee5",
-      "pageGas": "700000",
-      "hash": "0x135af02a00396acec794ca4fc6b71aa29c782a21481a41a6304501d5a1921e8f"
-    },
-    {
-      "who": "holder",
-      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
       "selector": "0x218160aa",
       "pageGas": "700000",
-      "hash": "0xba54c9bed3aa86d9758a3997e39c450dc321a617a3712b36e1625ed7761a308f"
+      "hash": "0xb859161a3c9827da6de94811b565af81c0b69b48523d65117003e410203904fd"
     },
     {
       "who": "holder",
       "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
       "selector": "0x40e58ee5",
       "pageGas": "700000",
-      "hash": "0xb407d226e8fc919e9ec4f610d6feb06e77b585b9606aff8dd8fdf07e57d1c71d"
+      "hash": "0x1f22568051232b4abeb7bd7b4c232e4f6689398727d86893f7411ac9b751933c"
     }
   ],
-  "consoleErrors": []
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ]
 }
