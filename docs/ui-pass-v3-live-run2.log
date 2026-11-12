@@ -1,0 +1,27 @@
+PASS  Recovery Mode (simulated, close blocked): banner and disabled buttons follow DeedLens
+PASS  Recovery Mode banner at 390px, no sideways scroll
+PASS  Recovery Mode (simulated, close allowed): banner and disabled buttons follow DeedLens
+PASS  withdraw collateral from the UI to bring the position under the rescue line  -  0.00636 BTC, Done. view transaction
+PASS  chain: ICR is now under 120% and above 110%  -  117.04%
+PASS  rescue page lists the at-risk position and the start button is enabled
+PASS  a stranger starts the rescue auction from the At risk list  -  Done. view transaction
+FAIL  auction card shows floor, time left, the winner's target ICR and the bid fee line  -  You pay 549.59 MUSD. 2.75 MUSD of it is the protocol fee, paid out of the seller's side, nothing extra on top.
+PASS  win the rescue auction from the UI (approve, then bid with BTC top-up)  -  Done. view transaction
+PASS  chain: bidder holds the Deed and the position left above the safe ICR  -  150.36%
+PASS  chain: seller credited price minus fee, treasury credited the fee (0.5%)  -  paid 549.4903, seller +546.7428, treasury +2.7475
+PASS  old owner claims the auction proceeds from the UI (Claim 546.74 MUSD (auction))  -  card removed after the action, the chain check that follows decides
+PASS  chain: wallet received the auction proceeds
+PASS  close panel states the entire debt less the 200 MUSD deposit  -  ui 1852.22, lens 1852.221
+PASS  close the position from the UI (approve entire debt, then close)  -  Done. view transaction
+PASS  chain: trove closed by the holder and the collateral came back to the wallet  -  status 2, +0.04321 BTC
+PASS  closed position says nothing to claim and the claim button is disabled
+PASS  a position closed by a redemption (surplus already claimed) says nothing to claim, button disabled
+FAIL  a position held by someone else shows the connect-the-holder note, no actions
+PASS  chain: redeemed position has no surplus left (it was claimed in the earlier run)
+FAIL  open form blocks an under-collateralised position before sending anything
+PASS  stats, indexer up (follows v2 only): current deployment counted from chain and matches an independent scan  -  ui 4 pos / 2 wallets / 1,237.51 MUSD / fees 6.19 MUSD; chain 4 / 2 / 1237.51 / 6.1876
+FAIL  stats, indexer up: earlier deployment is labelled and its numbers match an independent v2 scan  -  Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees.
+PASS  stats, indexer down: current deployment counted from chain and matches an independent scan  -  ui 4 pos / 2 wallets / 1,237.51 MUSD / fees 6.19 MUSD; chain 4 / 2 / 1237.51 / 6.1876
+PASS  stats, indexer down: page says the indexer did not answer, no earlier line, no error box
+PASS  activity lists recent v3 transactions with explorer links, newest first  -  12 rows
+PASS  activity shows this run's sale and rescue with their amounts

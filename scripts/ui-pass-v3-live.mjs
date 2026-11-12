@@ -191,12 +191,13 @@ async function simulateRecovery(page, canClose) {
 }
 
 // independent count of the events the Activity page shows for this deployment: plain getLogs with the library's own filters
-async function chainTotals(from, fromVersion) {
+async function chainTotals(from, fromVersion, v2 = false) {
   const A = fromVersion;
   const head = await pub.getBlockNumber();
   const created = parseAbiItem("event PositionCreated(uint256 indexed tokenId, address indexed vault, address indexed owner, uint256 collateral, uint256 debt)");
-  const sold = parseAbiItem("event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price, uint256 fee)");
-  const won = parseAbiItem("event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 fee, uint256 topUp)");
+  // the v2 events have no fee field
+  const sold = parseAbiItem(v2 ? "event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price)" : "event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price, uint256 fee)");
+  const won = parseAbiItem(v2 ? "event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 topUp)" : "event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 fee, uint256 topUp)");
   const listed = parseAbiItem("event Listed(uint256 indexed tokenId, address indexed seller, uint256 price, uint64 expiry, uint256 minICR, bytes32 snapshot)");
   const started = parseAbiItem("event Started(uint256 indexed tokenId, address indexed seller, bool byOwner, uint256 startPrice, uint256 floorPrice, uint64 duration)");
   let positions = 0, volume = 0n, fees = 0n;
@@ -214,8 +215,8 @@ async function chainTotals(from, fromVersion) {
     c.forEach((x) => w.add(lc(x.args.owner)));
     l.forEach((x) => w.add(lc(x.args.seller)));
     st.forEach((x) => w.add(lc(x.args.seller)));
-    for (const x of s) { volume += x.args.price; fees += x.args.fee; w.add(lc(x.args.seller)); w.add(lc(x.args.buyer)); }
-    for (const x of wn) { volume += x.args.price; fees += x.args.fee; w.add(lc(x.args.seller)); w.add(lc(x.args.winner)); }
+    for (const x of s) { volume += x.args.price; fees += x.args.fee ?? 0n; w.add(lc(x.args.seller)); w.add(lc(x.args.buyer)); }
+    for (const x of wn) { volume += x.args.price; fees += x.args.fee ?? 0n; w.add(lc(x.args.seller)); w.add(lc(x.args.winner)); }
   }
   return { positions, volume, fees, wallets: w.size };
 }
@@ -443,7 +444,7 @@ async function main() {
     const card = await text(alice);
     const treasuryBefore = await claimable(dep.auction, dep.treasury);
     const bobBefore = await claimable(dep.auction, wallets.bob.address);
-    step("auction card shows floor, time left, the winner's target ICR and the bid fee line", /Floor/.test(card) && /Time left/.test(card) && /Winner leaves ICR/.test(card) && /protocol fee/.test(card), (card.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 110));
+    step("auction card shows floor, time left, the winner's target ICR and the bid fee line", /floor/i.test(card) && /time left/i.test(card) && /winner leaves icr/i.test(card) && /protocol fee/.test(card), (card.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 110));
     await shot(alice, "rescue-live");
     const oldOwnerMusd = await musdOf(wallets.alice.address);
     r = await tx(alice, "Bid at current price");
@@ -508,9 +509,8 @@ async function main() {
     step("a position closed by a redemption (surplus already claimed) says nothing to claim, button disabled", /Nothing to claim/.test(t3) && (await bob.getByRole("button", { name: "Claim surplus", exact: true }).isDisabled()) && /redeemed/.test(t3));
     await shot(bob, "position-redeemed");
     await bob.goto(BASE + "/position/1", { waitUntil: "domcontentloaded" });
-    await bob.getByRole("heading", { name: "Deed #1" }).waitFor({ timeout: 90000 });
-    await settle(bob, 1500);
-    step("a position held by someone else shows the connect-the-holder note, no actions", /Connect the wallet that holds this Deed/.test(await text(bob)));
+    const note = await bob.getByText(/Connect the wallet that holds this Deed/).first().waitFor({ timeout: 90000 }).then(() => true, () => false);
+    step("a position held by someone else shows the connect-the-holder note, no actions", note && (await bob.getByRole("button", { name: "Close position", exact: true }).count()) === 0);
     const a3 = await lens(3);
     step("chain: redeemed position has no surplus left (it was claimed in the earlier run)", a3.surplus === 0n && a3.status === 4);
     untested.push("A claim that actually pays out surplus: surplus only exists after a third party's full redemption of a trove, which cannot be caused on demand. The claim path itself was exercised by the contracts session (docs/demo.md, Deed #3 of the v3 run, tx 0x3a672efe…57fa67). The UI shows 'Nothing to claim' for the redeemed and closed positions.");
@@ -523,6 +523,7 @@ async function main() {
     await alice.getByRole("heading", { name: "Open a position" }).waitFor({ timeout: 90000 });
     await fill(alice, "Collateral (BTC)", "0.001");
     await fill(alice, "Borrow (MUSD, min 1,800)", "1800");
+    await alice.getByText(/under 110%, this would revert/).waitFor({ timeout: 90000 });
     step("open form blocks an under-collateralised position before sending anything", await alice.getByRole("button", { name: "Open position", exact: true }).isDisabled());
     await connect(bob);
     await bob.goto(BASE + "/position/3", { waitUntil: "domcontentloaded" });
@@ -531,7 +532,7 @@ async function main() {
   // ---------- phase 9: stats, earlier deployment, indexer fallback ----------
   if (FROM <= 9) {
     const truth = await chainTotals(BigInt(dep.deployBlock), dep);
-    const earlier = await chainTotals(16339552n, dep.previousDeployments.v2);
+    const earlier = await chainTotals(16339552n, dep.previousDeployments.v2, true);
     for (const [label, pg, apiUp] of [["indexer up (follows v2 only)", empty, true], ["indexer down", await session("empty"), false]]) {
       if (!apiUp) await pg.route(`${INDEXER}/**`, (route) => route.abort());
       await pg.goto(BASE + "/", { waitUntil: "domcontentloaded" });

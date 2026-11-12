@@ -1,0 +1,199 @@
+{
+  "base": "http://localhost:3111",
+  "position": "4",
+  "results": [
+    {
+      "name": "Recovery Mode (simulated, close blocked): banner and disabled buttons follow DeedLens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode banner at 390px, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated, close allowed): banner and disabled buttons follow DeedLens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "withdraw collateral from the UI to bring the position under the rescue line",
+      "ok": true,
+      "detail": "0.00636 BTC, Done. view transaction"
+    },
+    {
+      "name": "chain: ICR is now under 120% and above 110%",
+      "ok": true,
+      "detail": "117.04%"
+    },
+    {
+      "name": "rescue page lists the at-risk position and the start button is enabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a stranger starts the rescue auction from the At risk list",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "auction card shows floor, time left, the winner's target ICR and the bid fee line",
+      "ok": false,
+      "detail": "You pay 549.59 MUSD. 2.75 MUSD of it is the protocol fee, paid out of the seller's side, nothing extra on top."
+    },
+    {
+      "name": "win the rescue auction from the UI (approve, then bid with BTC top-up)",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: bidder holds the Deed and the position left above the safe ICR",
+      "ok": true,
+      "detail": "150.36%"
+    },
+    {
+      "name": "chain: seller credited price minus fee, treasury credited the fee (0.5%)",
+      "ok": true,
+      "detail": "paid 549.4903, seller +546.7428, treasury +2.7475"
+    },
+    {
+      "name": "old owner claims the auction proceeds from the UI (Claim 546.74 MUSD (auction))",
+      "ok": true,
+      "detail": "card removed after the action, the chain check that follows decides"
+    },
+    {
+      "name": "chain: wallet received the auction proceeds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "close panel states the entire debt less the 200 MUSD deposit",
+      "ok": true,
+      "detail": "ui 1852.22, lens 1852.221"
+    },
+    {
+      "name": "close the position from the UI (approve entire debt, then close)",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: trove closed by the holder and the collateral came back to the wallet",
+      "ok": true,
+      "detail": "status 2, +0.04321 BTC"
+    },
+    {
+      "name": "closed position says nothing to claim and the claim button is disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a position closed by a redemption (surplus already claimed) says nothing to claim, button disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a position held by someone else shows the connect-the-holder note, no actions",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "name": "chain: redeemed position has no surplus left (it was claimed in the earlier run)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "open form blocks an under-collateralised position before sending anything",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "name": "stats, indexer up (follows v2 only): current deployment counted from chain and matches an independent scan",
+      "ok": true,
+      "detail": "ui 4 pos / 2 wallets / 1,237.51 MUSD / fees 6.19 MUSD; chain 4 / 2 / 1237.51 / 6.1876"
+    },
+    {
+      "name": "stats, indexer up: earlier deployment is labelled and its numbers match an independent v2 scan",
+      "ok": false,
+      "detail": "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees."
+    },
+    {
+      "name": "stats, indexer down: current deployment counted from chain and matches an independent scan",
+      "ok": true,
+      "detail": "ui 4 pos / 2 wallets / 1,237.51 MUSD / fees 6.19 MUSD; chain 4 / 2 / 1237.51 / 6.1876"
+    },
+    {
+      "name": "stats, indexer down: page says the indexer did not answer, no earlier line, no error box",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "activity lists recent v3 transactions with explorer links, newest first",
+      "ok": true,
+      "detail": "12 rows"
+    },
+    {
+      "name": "activity shows this run's sale and rescue with their amounts",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [
+    {
+      "who": "bob",
+      "to": "0x0f4AD4abd3099cE31838B45FE133753DAfb17f72",
+      "selector": "0xb460af94",
+      "pageGas": "700000",
+      "hash": "0x328d1c26959bacbec1e188f3988bec65f705292b1ef04d5a023a24fec7adc59c"
+    },
+    {
+      "who": "alice",
+      "to": "0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355",
+      "selector": "0xd721713a",
+      "pageGas": "700000",
+      "hash": "0x09632ba8b6829cf1c3754f9912a996ba760b6f4fea346a48ac8e7ca0ece47cdf"
+    },
+    {
+      "who": "alice",
+      "to": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "selector": "0x095ea7b3",
+      "pageGas": "700000",
+      "hash": "0x03f97b3832ad726b1e05a861eda96ecdc35efdbf2787c2ad057e89a724e1f834"
+    },
+    {
+      "who": "alice",
+      "to": "0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355",
+      "selector": "0x04e12e62",
+      "pageGas": "796172",
+      "hash": "0xa49404f2d20c31f839be358984a47af010a6166dd29bacd8f2ddec02134507d9"
+    },
+    {
+      "who": "bob",
+      "to": "0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355",
+      "selector": "0x4e71d92d",
+      "pageGas": "700000",
+      "hash": "0x25b0ab511658c8dfcb21b73255f2c2fb0edb5973b2f39605cbc7a54ff7921593"
+    },
+    {
+      "who": "alice",
+      "to": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "selector": "0x095ea7b3",
+      "pageGas": "700000",
+      "hash": "0x574ac49e2ed49c05e9630da1523d1348498309ae4168a652f90b30e965e22c90"
+    },
+    {
+      "who": "alice",
+      "to": "0x0f4AD4abd3099cE31838B45FE133753DAfb17f72",
+      "selector": "0x43d726d6",
+      "pageGas": "700000",
+      "hash": "0x7ff8e9f12195d3c01d7c40400c4127b92c7fd840e9f52ac027a381bfc64d9a76"
+    }
+  ],
+  "untested": [
+    "A claim that actually pays out surplus: surplus only exists after a third party's full redemption of a trove, which cannot be caused on demand. The claim path itself was exercised by the contracts session (docs/demo.md, Deed #3 of the v3 run, tx 0x3a672efe…57fa67). The UI shows 'Nothing to claim' for the redeemed and closed positions.",
+    "Stats from an indexer that follows v3: the indexer is not wired to v3 yet, so only the 'indexer behind' path (v2 history from the API, v3 from chain) and the 'indexer down' path were exercised. The code path for an indexer that has v3 was not run against real data."
+  ],
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ]
+}
