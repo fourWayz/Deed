@@ -8,6 +8,8 @@ interface IBorrowerOperations {
     function addColl(address upperHint, address lowerHint) external payable;
     function withdrawColl(uint256 amount, address upperHint, address lowerHint) external;
     function repayMUSD(uint256 amount, address upperHint, address lowerHint) external;
+    function withdrawMUSD(uint256 amount, address upperHint, address lowerHint) external;
+    function refinance(address upperHint, address lowerHint) external;
     function closeTrove() external;
     function claimCollateral() external;
     function minNetDebt() external view returns (uint256);
@@ -21,6 +23,8 @@ interface ITroveManager {
     function getTroveDebt(address borrower) external view returns (uint256);
     function getCurrentICR(address borrower, uint256 price) external view returns (uint256);
     function checkRecoveryMode(uint256 price) external view returns (bool);
+    function getTCR(uint256 price) external view returns (uint256);
+    function collSurplusPool() external view returns (address);
     function getEntireDebtAndColl(address borrower)
         external
         view
@@ -38,7 +42,12 @@ interface IPriceFeed {
     function fetchPrice() external view returns (uint256);
 }
 
+interface ICollSurplusPool {
+    function getCollateral(address account) external view returns (uint256);
+}
+
 interface IMUSD {
+    function mintList(address account) external view returns (bool);
     function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);

@@ -21,6 +21,7 @@ abstract contract Base is Test {
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
     address mallory = makeAddr("mallory");
+    address treasury = makeAddr("treasury");
 
     uint256 constant COLL = 0.1 ether;
     uint256 constant DEBT = 2_000e18;

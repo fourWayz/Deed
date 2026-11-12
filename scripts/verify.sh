@@ -1,14 +1,15 @@
 #!/bin/bash
 # Verifies the contracts listed in deployments.json on Sourcify and on the Mezo Blockscout API.
-# Reads MEZO_TESTNET_RPC and DEX_PAIR from .env. Needs forge and node. Prints no secrets.
+# Reads MEZO_TESTNET_RPC from ENV_FILE (default ./.env). Needs forge and node. Prints no secrets.
 export PATH=$(ls -d ~/.nvm/versions/node/v22*/bin 2>/dev/null | tail -1):$HOME/.foundry/bin:$PATH
 cd "$(dirname "$0")/.."
-set -a; . ./.env; set +a
+set -a; . "${ENV_FILE:-./.env}"; set +a
 
 j() { node -e "const d=require('./deployments.json'); console.log($1)"; }
 BO=$(j d.borrowerOperations); TM=$(j d.troveManager); PF=$(j d.priceFeed); MUSD=$(j d.musd)
-D=$(j d.deedNFT); F=$(j d.factory); M=$(j d.market); A=$(j d.auction); S=$(j d.spotSource)
+D=$(j d.deedNFT); F=$(j d.factory); M=$(j d.market); A=$(j d.auction); L=$(j d.lens); S=$(j d.spotSource)
 RESCUE=$(j d.auctionParams.rescueICR); SAFE=$(j d.auctionParams.safeICR); DEV=$(j d.auctionParams.maxDeviationBps)
+TREASURY=$(j d.treasury); MFEE=$(j d.fees.marketBps); AFEE=$(j d.fees.auctionBps); PAIR=$(j d.dexPair); WINDOW=3600
 
 BLOCKSCOUT=https://api.explorer.test.mezo.org/api
 SOURCIFY=https://sourcify.dev/server/v2/contract/31611
@@ -31,6 +32,7 @@ verify() { # address name constructor-args
 
 verify $D src/DeedNFT.sol:DeedNFT
 verify $F src/DeedFactory.sol:DeedFactory $(cast abi-encode 'c(address,address,address,address,address)' $D $BO $TM $PF $MUSD)
-verify $M src/DeedMarket.sol:DeedMarket $(cast abi-encode 'c(address,address,address,address,address)' $D $F $TM $PF $MUSD)
-verify $A src/RescueAuction.sol:RescueAuction $(cast abi-encode 'c(address,address,address,address,address,address,uint256,uint256,uint256)' $D $F $TM $PF $S $MUSD $RESCUE $SAFE $DEV)
-verify $S src/PairSpotPrice.sol:PairSpotPrice $(cast abi-encode 'c(address,address)' $DEX_PAIR $MUSD)
+verify $M src/DeedMarket.sol:DeedMarket $(cast abi-encode 'c(address,address,address,address,address,address,uint256)' $D $F $TM $PF $MUSD $TREASURY $MFEE)
+verify $A src/RescueAuction.sol:RescueAuction $(cast abi-encode 'c(address,address,address,address,address,address,uint256,uint256,uint256,address,uint256)' $D $F $TM $PF $S $MUSD $RESCUE $SAFE $DEV $TREASURY $AFEE)
+verify $L src/DeedLens.sol:DeedLens $(cast abi-encode 'c(address,address,address,address,address,address)' $D $F $BO $TM $PF $MUSD)
+verify $S src/PairTwapPrice.sol:PairTwapPrice $(cast abi-encode 'c(address,address,uint256)' $PAIR $MUSD $WINDOW)
