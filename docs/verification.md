@@ -1,5 +1,36 @@
 # Source verification
 
+## Third deployment (v3, london build), checked 2026-11-12
+
+Deployed in one broadcast, built with `evm_version = "london"`. The only `PUSH0` / `MCOPY` / `TLOAD` hits in the runtime
+code are in the last ten lines of the disassembly of `DeedNFT` and `DeedFactory`, which is the Solidity metadata tail read as
+instructions, not code.
+
+| Contract | Address | Sourcify | Mezo explorer API |
+| --- | --- | --- | --- |
+| DeedNFT | `0x9C92E662cB7de018162E1d06F1f977f6A0B5547f` | exact match | source and ABI returned |
+| DeedFactory | `0xb8602DBF0e5BBDE81C504C87F860fbbe7DF125CD` | exact match | source and ABI returned |
+| DeedMarket | `0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd` | exact match | source and ABI returned |
+| RescueAuction | `0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355` | exact match | source and ABI returned |
+| DeedLens | `0xDd628bBb4663549E0Af7815E93D14002D1f9Dde1` | exact match | source and ABI returned |
+| PairTwapPrice | `0xda3e5a7785Ba49B87B5884dB7662e44Af31f4d00` | exact match | source and ABI returned |
+
+Sourcify's `match`, `creationMatch` and `runtimeMatch` are all `exact_match` (read from
+`https://sourcify.dev/server/v2/contract/31611/<address>`; DeedNFT verified at 16:28 UTC and DeedMarket at 16:30 UTC).
+
+**What changed on the explorer side.** The sections below record that the Mezo Blockscout verifier rejected every submission
+in October. On 2026-11-12 `https://api.explorer.test.mezo.org/api?module=contract&action=getsourcecode` returns the contract
+name, ABI and source for the v3 contracts and also for the second deployment's `DeedNFT`. `scripts/verify.sh` submitted to both
+services, so this document cannot say whether the explorer verified the source itself or picked it up from Sourcify. It was not
+looked at in a browser. The explorer page may still differ from the API.
+
+`scripts/verify.sh` (set `ENV_FILE` to a file with `MEZO_TESTNET_RPC`) reads `deployments.json`, submits to both services and
+prints one line per contract.
+
+---
+
+# Earlier deployments
+
 ## First deployment (cancun build), checked 2026-10-24. Superseded, do not use
 
 Blockscout (`api.explorer.test.mezo.org`) accepted every submission and answered `Fail - Unable to verify`. Sourcify

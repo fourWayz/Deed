@@ -195,11 +195,21 @@ const collFor = (debt, price, icrPct1000) => {
   return ((total * icrPct1000) / 1000n * 10n ** 18n) / price + 10n ** 12n;
 };
 
+// RESUME_B=<deed id> continues after a run that failed once position B was won: it reloads the partial results,
+// skips steps 1 to 4 and the auction itself, and finishes the claims and the claimCollateral step
+const RESUME_B = process.env.RESUME_B ? BigInt(process.env.RESUME_B) : null;
 const out = { startedAt: new Date().toISOString(), wallets: Object.fromEntries(Object.entries(accounts).map(([n, a]) => [n, a.address])) };
 const results = (out.results = {});
 const DEBT = 1800n * 10n ** 18n;
 
 async function main() {
+  if (RESUME_B || process.env.RESUME_C) {
+    const prev = JSON.parse(fs.readFileSync(here("../docs/e2e-v3-results.partial.json")));
+    log.push(...prev.txs);
+    Object.assign(results, prev.results);
+    out.startedAt = prev.startedAt;
+    out.resumedAt = new Date().toISOString();
+  }
   const price0 = await read(sys.priceFeed, abi.feed, "fetchPrice");
   const spot0 = await read(v3.spotSource, abi.spot, "spotPrice");
   const [sp, stcr, srm, sstale] = await read(v3.lens, abi.lens, "system");
@@ -211,7 +221,7 @@ async function main() {
   for (const n of ["seller", "buyer", "treasury"]) say(`  ${n} ${accounts[n].address} ${e18(await pub.getBalance({ address: accounts[n].address }))} BTC ${e18(await musdOf(accounts[n].address))} MUSD`);
 
   // ---------- borrow, refinance, fee-bearing sale, closeTrove ----------
-  if (STEPS.includes("borrow") || STEPS.includes("sale")) {
+  if (!RESUME_B && !process.env.RESUME_C && (STEPS.includes("borrow") || STEPS.includes("sale"))) {
     say("\n[1] open position A (about 150% ICR)");
     await ensureBtc("seller", collFor(DEBT, price0, 1500n) + 5n * 10n ** 15n);
     const a = await open("seller", "seller opens position A", collFor(DEBT, price0, 1500n), DEBT);
@@ -291,55 +301,76 @@ async function main() {
   }
 
   // ---------- rescue ----------
-  if (STEPS.includes("rescue")) {
+  if (STEPS.includes("rescue") && !process.env.RESUME_C) {
     say("\n[5] rescue auction with the time weighted price guard");
-    const price1 = await read(sys.priceFeed, abi.feed, "fetchPrice");
-    await ensureBtc("seller", collFor(DEBT, price1, 1170n) + 5n * 10n ** 15n);
-    const b = await open("seller", "seller opens position B (about 117%)", collFor(DEBT, price1, 1170n), DEBT);
-    const B = b.id;
-    const lb = await lensOf(B);
-    say(`  Deed #${B} coll ${e18(lb.collateral)} debt ${e18(lb.debt)} ICR ${pct(lb.icr)} (rescue line ${pct(await read(v3.auction, abi.auction, "rescueICR"))})`);
-    const oracleNow = await read(sys.priceFeed, abi.feed, "fetchPrice");
-    const twapNow = await read(v3.spotSource, abi.spot, "spotPrice");
-    const equity = await read(v3.auction, abi.auction, "equityOf", [B]);
-    say(`  oracle ${e18(oracleNow)}  twap ${e18(twapNow)}  deviation ${(Math.abs(Number(twapNow - oracleNow)) / Number(oracleNow) * 100).toFixed(2)}%  equityOf ${e18(equity)}`);
-    await send("buyer", "buyer starts the rescue (ICR is under the line)", { to: v3.auction, abi: abi.auction, fn: "startRescue", args: [B] });
-    const au = await read(v3.auction, abi.auction, "auctions", [B]);
-    say(`  start ${e18(au[4])} floor ${e18(au[5])} duration ${au[3]}s`);
-    await send("seller", "seller cannot borrow against an auctioned vault", { to: b.vault, abi: abi.vault, fn: "borrow", args: [10n ** 18n, ZERO, ZERO], expectRevert: "NotController" });
-    await sleep(30);
-    const quote = await read(v3.auction, abi.auction, "currentPrice", [B]);
-    const need = await read(v3.auction, abi.auction, "requiredTopUp", [B]);
-    const topUp = need + need / 100n + 1n;
-    await approve("buyer", v3.auction, quote * 2n, "auction");
-    const fee = (p) => (p * feeBpsAuction) / 10000n;
-    const sBefore = await musdOf(accounts.seller.address);
-    const tBefore = await musdOf(accounts.treasury.address);
-    const priceAtBid = await read(v3.auction, abi.auction, "currentPrice", [B]);
-    const [u2, l2] = await hints(lb.collateral + topUp, lb.principal);
-    await send("buyer", "buyer wins the auction and tops up in the same tx", { to: v3.auction, abi: abi.auction, fn: "bid", args: [B, priceAtBid, u2, l2], value: topUp });
-    const la = await lensOf(B);
+    let B, b, lb, equity, oracleNow, twapNow, priceAtBid, feePaid, la;
+    if (!RESUME_B) {
+      const price1 = await read(sys.priceFeed, abi.feed, "fetchPrice");
+      await ensureBtc("seller", collFor(DEBT, price1, 1170n) + 5n * 10n ** 15n);
+      b = await open("seller", "seller opens position B (about 117%)", collFor(DEBT, price1, 1170n), DEBT);
+      B = b.id;
+      lb = await lensOf(B);
+      say(`  Deed #${B} coll ${e18(lb.collateral)} debt ${e18(lb.debt)} ICR ${pct(lb.icr)} (rescue line ${pct(await read(v3.auction, abi.auction, "rescueICR"))})`);
+      oracleNow = await read(sys.priceFeed, abi.feed, "fetchPrice");
+      twapNow = await read(v3.spotSource, abi.spot, "spotPrice");
+      equity = await read(v3.auction, abi.auction, "equityOf", [B]);
+      say(`  oracle ${e18(oracleNow)}  twap ${e18(twapNow)}  deviation ${(Math.abs(Number(twapNow - oracleNow)) / Number(oracleNow) * 100).toFixed(2)}%  equityOf ${e18(equity)}`);
+      await send("buyer", "buyer starts the rescue (ICR is under the line)", { to: v3.auction, abi: abi.auction, fn: "startRescue", args: [B] });
+      const au = await read(v3.auction, abi.auction, "auctions", [B]);
+      say(`  start ${e18(au[4])} floor ${e18(au[5])} duration ${au[3]}s`);
+      await send("seller", "seller cannot borrow against an auctioned vault", { to: b.vault, abi: abi.vault, fn: "borrow", args: [10n ** 18n, ZERO, ZERO], expectRevert: "NotController" });
+      await sleep(30);
+      const quote = await read(v3.auction, abi.auction, "currentPrice", [B]);
+      const need = await read(v3.auction, abi.auction, "requiredTopUp", [B]);
+      const topUp = need + need / 100n + 1n;
+      await approve("buyer", v3.auction, quote * 2n, "auction");
+      priceAtBid = await read(v3.auction, abi.auction, "currentPrice", [B]);
+      const [u2, l2] = await hints(lb.collateral + topUp, lb.principal);
+      const r = await send("buyer", "buyer wins the auction and tops up in the same tx", { to: v3.auction, abi: abi.auction, fn: "bid", args: [B, priceAtBid, u2, l2], value: topUp });
+      const won = parseEventLogs({ abi: abi.auction, logs: r.logs, eventName: "Won" })[0].args;
+      priceAtBid = won.price;
+      feePaid = won.fee;
+      results.rescueTopUpBTC = e18(topUp);
+    } else {
+      B = RESUME_B;
+      b = { vault: await read(v3.factory, abi.factory, "vaultOf", [B]) };
+      const evs = await pub.getContractEvents({ address: v3.auction, abi: abi.auction, eventName: "Won", args: { tokenId: B }, fromBlock: BigInt(dep.deployBlock), toBlock: "latest" });
+      const won = evs[evs.length - 1].args;
+      priceAtBid = won.price;
+      feePaid = won.fee;
+      // readings the first run printed just before it failed on a script bug (see docs/demo.md)
+      lb = { icr: "116.98%", collateral: 32748807974404764n, debt: 2001800000000000000000n };
+      oracleNow = 71502512960000000000000n;
+      twapNow = 78477188117572139227190n;
+      equity = 539756211464020064403n;
+      say(`  resuming after the bid on Deed #${B}: price paid ${e18(priceAtBid)}, fee ${e18(feePaid)}`);
+    }
+    la = await lensOf(B);
     eq(la.holder.toLowerCase(), accounts.buyer.address.toLowerCase(), "buyer holds B");
-    say(`  ICR ${pct(lb.icr)} -> ${pct(la.icr)}`);
     const owedSeller = await read(v3.auction, abi.auction, "claimable", [accounts.seller.address]);
     const owedTreasury = await read(v3.auction, abi.auction, "claimable", [accounts.treasury.address]);
     eq(owedSeller + owedTreasury, priceAtBid, "fee + proceeds == price paid");
-    eq(owedTreasury, fee(priceAtBid), "fee is feeBps of the price");
+    eq(owedTreasury, feePaid, "treasury is owed the fee from the event");
+    eq(owedTreasury, (priceAtBid * feeBpsAuction) / 10000n, "fee is feeBps of the price");
+    const sBefore = await musdOf(accounts.seller.address);
+    const tBefore = await musdOf(accounts.treasury.address);
     await send("seller", "seller claims the auction payout", { to: v3.auction, abi: abi.auction, fn: "claim" });
     await send("treasury", "treasury claims the auction fee", { to: v3.auction, abi: abi.auction, fn: "claim" });
     eq((await musdOf(accounts.seller.address)) - sBefore, owedSeller, "seller received proceeds");
     eq((await musdOf(accounts.treasury.address)) - tBefore, owedTreasury, "treasury received fee");
     eq(await musdOf(v3.auction), 0n, "auction holds nothing after both claims");
+    say(`  price paid ${e18(priceAtBid)} = seller ${e18(owedSeller)} + fee ${e18(owedTreasury)}; auction balance 0; ICR now ${pct(la.icr)}`);
+    results.rescueBefore ??= lb && { collateral: e18(lb.collateral), debt: e18(lb.debt), icr: pct(lb.icr) };
     results.rescue = {
       deed: B.toString(),
-      icrBefore: pct(lb.icr),
+      icrBefore: lb?.icr !== undefined && typeof lb.icr === "bigint" ? pct(lb.icr) : lb?.icr,
       icrAfter: pct(la.icr),
-      price: e18(priceAtBid),
+      pricePaid: e18(priceAtBid),
       fee: e18(owedTreasury),
       sellerPayout: e18(owedSeller),
-      oracle: e18(oracleNow),
-      twap: e18(twapNow),
-      equityOf: e18(equity),
+      oracle: oracleNow ? e18(oracleNow) : results.rescue?.oracle,
+      twap: twapNow ? e18(twapNow) : results.rescue?.twap,
+      equityOf: equity ? e18(equity) : results.rescue?.equityOf,
     };
     // recover the collateral: the winner closes the position
     const need2 = la.debt - 200n * 10n ** 18n;
@@ -352,39 +383,63 @@ async function main() {
   if (STEPS.includes("claim")) {
     say("\n[6] claimCollateral: a redemption closes a trove, the vault claims the surplus");
     const p = await read(sys.priceFeed, abi.feed, "fetchPrice");
-    // as low an ICR as safe, so a redemption reaches this trove before any other
-    await ensureBtc("seller", collFor(DEBT, p, 1110n) + 5n * 10n ** 15n);
-    const c = await open("seller", "seller opens position C (about 111%)", collFor(DEBT, p, 1110n), DEBT);
-    const lcc = await lensOf(c.id);
-    say(`  Deed #${c.id} vault ${c.vault} coll ${e18(lcc.collateral)} debt ${e18(lcc.debt)} ICR ${pct(lcc.icr)}`);
-    const net = (await read(sys.troveManager, abi.tm, "getTroveDebt", [c.vault])) - 200n * 10n ** 18n;
-    const amount = net + 2n * 10n ** 18n; // interest keeps accruing, and the surplus stays with the redeemer
-    const [first] = await read(sys.hintHelpers, abi.hh, "getRedemptionHints", [amount, p, 0n]);
-    say(`  first redemption hint ${first}`);
-    if (first.toLowerCase() !== c.vault.toLowerCase()) {
-      results.claim = { skipped: `another trove (${first}) has a lower ICR, a redemption would hit it first` };
-      say("  SKIPPED: another trove would be redeemed first");
+    // RESUME_C=<deed id> picks up a position C that an earlier run already opened
+    let c;
+    let openBlock = 0n;
+    if (process.env.RESUME_C) {
+      const id = BigInt(process.env.RESUME_C);
+      c = { id, vault: await read(v3.factory, abi.factory, "vaultOf", [id]) };
+      openBlock = BigInt(process.env.RESUME_C_BLOCK ?? 0);
     } else {
-      await ensureMusd("buyer", amount);
-      const redeemerBtc0 = await pub.getBalance({ address: accounts.buyer.address });
-      await send("buyer", "buyer redeems exactly this trove's net debt", {
-        to: sys.troveManager,
-        abi: abi.tm,
-        fn: "redeemCollateral",
-        args: [amount, c.vault, ZERO, ZERO, 0n, 1n],
-      });
-      eq(await read(sys.troveManager, abi.tm, "getTroveStatus", [c.vault]), 4, "trove closed by redemption");
-      const lz = await lensOf(c.id);
-      say(`  status ${lz.status}, surplus waiting ${e18(lz.surplus)} BTC`);
-      if (lz.surplus === 0n) throw new Error("no surplus after the redemption");
-      const sBtc0 = await pub.getBalance({ address: accounts.seller.address });
-      const r = await send("seller", "seller claims the surplus through the vault", { to: c.vault, abi: abi.vault, fn: "claimSurplus" });
-      const sBtc1 = await pub.getBalance({ address: accounts.seller.address });
-      eq(sBtc1 - sBtc0 + r.gasUsed * r.effectiveGasPrice, lz.surplus, "holder received the surplus");
-      eq(await pub.getBalance({ address: c.vault }), 0n, "vault holds no BTC");
-      await send("seller", "a second claim reverts clearly", { to: c.vault, abi: abi.vault, fn: "claimSurplus", expectRevert: "NothingToClaim" });
-      results.claim = { deed: c.id.toString(), status: lz.status, surplusBTC: e18(lz.surplus), redeemerBtcReceived: e18((await pub.getBalance({ address: accounts.buyer.address })) - redeemerBtc0) };
+      // as low an ICR as safe, so a redemption reaches this trove before any other
+      await ensureBtc("seller", collFor(DEBT, p, 1110n) + 5n * 10n ** 15n);
+      c = await open("seller", "seller opens position C (about 111%)", collFor(DEBT, p, 1110n), DEBT);
+      openBlock = BigInt(log[log.length - 1].block);
     }
+    const lcc = await lensOf(c.id);
+    say(`  Deed #${c.id} vault ${c.vault} status ${lcc.status} coll ${e18(lcc.collateral)} debt ${e18(lcc.debt)} ICR ${pct(lcc.icr)}`);
+    let redeemedBy = "a third party before this script could";
+    const statusOf = () => read(sys.troveManager, abi.tm, "getTroveStatus", [c.vault]);
+    if ((await statusOf()) !== 4) {
+      const net = (await read(sys.troveManager, abi.tm, "getTroveDebt", [c.vault])) - 200n * 10n ** 18n;
+      const amount = net + 2n * 10n ** 18n; // interest keeps accruing, and the surplus stays with the redeemer
+      const [first] = await read(sys.hintHelpers, abi.hh, "getRedemptionHints", [amount, p, 0n]);
+      say(`  first redemption hint ${first}`);
+      if (first.toLowerCase() === c.vault.toLowerCase()) {
+        try {
+          await ensureMusd("buyer", amount);
+          await send("buyer", "buyer redeems exactly this trove's net debt", { to: sys.troveManager, abi: abi.tm, fn: "redeemCollateral", args: [amount, c.vault, ZERO, ZERO, 0n, 1n] });
+          redeemedBy = "the buyer wallet, in this script";
+        } catch (e) {
+          if ((await statusOf()) !== 4) throw e;
+          say("  the trove was redeemed by someone else while this script was preparing its own redemption");
+        }
+      }
+    }
+    eq(await statusOf(), 4, "trove closed by redemption");
+    // who redeemed it, from the TroveManager's own log for this vault
+    const topic = "0x" + "0".repeat(24) + c.vault.slice(2).toLowerCase();
+    const logs = await pub.request({ method: "eth_getLogs", params: [{ address: sys.troveManager, fromBlock: `0x${openBlock.toString(16)}`, toBlock: "latest", topics: [null, topic] }] });
+    const redeemLog = logs.find((l) => !log.some((e) => e.hash === l.transactionHash));
+    const redeemTx = redeemedBy.startsWith("the buyer") ? log[log.length - 1].hash : redeemLog?.transactionHash;
+    if (redeemedBy.startsWith("a third")) {
+      const rtx = redeemTx ? await pub.getTransaction({ hash: redeemTx }) : null;
+      say(`  redemption tx ${redeemTx} sent by ${rtx?.from}`);
+      log.push({ who: "third party", label: "a third party redeems this trove completely", hash: redeemTx, status: "success", block: redeemLog ? Number(BigInt(redeemLog.blockNumber)) : null, from: rtx?.from });
+    }
+    const lz = await lensOf(c.id);
+    say(`  status ${lz.status}, surplus waiting ${e18(lz.surplus)} BTC (lens)`);
+    if (lz.surplus === 0n) throw new Error("no surplus after the redemption");
+    eq(lz.surplus, await read(c.vault, abi.vault, "surplus"), "lens and vault agree on the surplus");
+    await send("buyer", "a stranger cannot claim the vault's surplus", { to: c.vault, abi: abi.vault, fn: "claimSurplus", expectRevert: "NotController" });
+    const sBtc0 = await pub.getBalance({ address: accounts.seller.address });
+    const r = await send("seller", "seller claims the surplus through the vault (claimCollateral)", { to: c.vault, abi: abi.vault, fn: "claimSurplus" });
+    const sBtc1 = await pub.getBalance({ address: accounts.seller.address });
+    eq(sBtc1 - sBtc0 + r.gasUsed * r.effectiveGasPrice, lz.surplus, "holder received exactly the surplus");
+    eq(await pub.getBalance({ address: c.vault }), 0n, "vault holds no BTC");
+    eq(await read(c.vault, abi.vault, "surplus"), 0n, "no surplus left");
+    await send("seller", "a second claim reverts clearly", { to: c.vault, abi: abi.vault, fn: "claimSurplus", expectRevert: "NothingToClaim" });
+    results.claim = { deed: c.id.toString(), status: lz.status, surplusBTC: e18(lz.surplus), redeemedBy, redemptionTx: redeemTx };
   }
 
   out.txs = log;
