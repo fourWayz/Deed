@@ -12,14 +12,15 @@ import { ErrorBox, NotDeployed, Skeletons } from "@/components/ui";
 // enough for the default 0.04 BTC position plus gas
 const NEEDED = parseEther("0.05");
 
-function Step({ n, title, state, children }: { n: number; title: string; state: "todo" | "now" | "done"; children?: React.ReactNode }) {
+function Step({ n, title, state, children }: { n: number; title: string; state: "todo" | "now" | "done" | "loading"; children?: React.ReactNode }) {
   return (
     <div className={`glass step ${state}`}>
       <div className="step-head">
         <span className="num">{state === "done" ? "✓" : n}</span>
         <h2 style={{ margin: 0 }}>{title}</h2>
       </div>
-      {state !== "todo" && <div className="stack" style={{ marginTop: 12 }}>{children}</div>}
+      {state === "loading" && <div className="skeleton" style={{ height: 44, marginTop: 12 }} />}
+      {state !== "todo" && state !== "loading" && <div className="stack" style={{ marginTop: 12 }}>{children}</div>}
     </div>
   );
 }
@@ -35,9 +36,12 @@ export default function Start() {
   const toList = mine.find((p) => !p.listing && !p.auction);
   const hasBtc = (bal.data?.value ?? 0n) >= NEEDED;
 
-  const s1 = !isConnected ? "now" : hasBtc || hasPosition ? "done" : "now";
-  const s2 = s1 !== "done" ? "todo" : hasPosition ? "done" : "now";
-  const s3 = s2 !== "done" ? "todo" : listed ? "done" : "now";
+  // until positions and the balance are known, guessing which step is open makes the page flip, so show a loading state
+  const loading = isConnected && (isLoading || bal.isLoading);
+  type S = "todo" | "now" | "done" | "loading";
+  const s1: S = loading ? "loading" : !isConnected ? "now" : hasBtc || hasPosition ? "done" : "now";
+  const s2: S = loading ? "loading" : s1 !== "done" ? "todo" : hasPosition ? "done" : "now";
+  const s3: S = loading ? "loading" : s2 !== "done" ? "todo" : listed ? "done" : "now";
 
   return (
     <>

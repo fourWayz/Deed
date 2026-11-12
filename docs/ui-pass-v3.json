@@ -139,7 +139,7 @@
     {
       "name": "position page: entire debt matches TroveManager (within accrual since the read)",
       "ok": true,
-      "detail": "ui 2002.84, chain 2002.8362"
+      "detail": "ui 2002.84, chain 2002.8371"
     },
     {
       "name": "debt breakdown rows add up to the entire debt",
@@ -197,6 +197,11 @@
       "detail": ""
     },
     {
+      "name": "leftover listing from an earlier run cleared from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
       "name": "list Deed #2 from the UI",
       "ok": true,
       "detail": "Done. view transaction"
@@ -208,8 +213,8 @@
     },
     {
       "name": "cancel the listing from the UI",
-      "ok": false,
-      "detail": "An unknown RPC error occurred."
+      "ok": true,
+      "detail": "Done. view transaction"
     },
     {
       "name": "closed position shows the surplus state instead of a bare button",
@@ -219,7 +224,7 @@
     {
       "name": "an impossible withdrawal shows a plain-language error, no raw selector",
       "ok": true,
-      "detail": "The contract function \"withdraw\" reverted with the following reason:"
+      "detail": "The contract refused this action: Arithmetic operation resulted in underflow or overflow."
     },
     {
       "name": "wizard, holder: step 2 done, step 3 shows the list form",
@@ -236,9 +241,23 @@
     {
       "who": "holder",
       "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0x40e58ee5",
+      "pageGas": "700000",
+      "hash": "0x135af02a00396acec794ca4fc6b71aa29c782a21481a41a6304501d5a1921e8f"
+    },
+    {
+      "who": "holder",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
       "selector": "0x218160aa",
       "pageGas": "700000",
-      "hash": "0x7e5d12ed5898ea04d69a674302df39d07d6e4b8c82d8378b2cd1c1d83dd9b1fa"
+      "hash": "0xba54c9bed3aa86d9758a3997e39c450dc321a617a3712b36e1625ed7761a308f"
+    },
+    {
+      "who": "holder",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0x40e58ee5",
+      "pageGas": "700000",
+      "hash": "0xb407d226e8fc919e9ec4f610d6feb06e77b585b9606aff8dd8fdf07e57d1c71d"
     }
   ],
   "consoleErrors": []

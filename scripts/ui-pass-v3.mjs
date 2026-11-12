@@ -81,7 +81,15 @@ const shot = (page, name) => page.screenshot({ path: `${SHOTS}/${name}.png`, ful
 const settle = (page, ms = 2500) => page.waitForTimeout(ms);
 const chip = (page) => page.evaluate(() => /0x[0-9a-fA-F]{2,6}\S{1,3}[0-9a-fA-F]{4}/.test(document.querySelector("nav")?.innerText ?? ""));
 
-async function connect(page) {
+async function connect(page, retry = true) {
+  try {
+    await connectOnce(page);
+  } catch (e) {
+    if (!retry) throw e;
+    await connect(page, false);
+  }
+}
+async function connectOnce(page) {
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(5000);
   if (!(await chip(page))) {
@@ -208,6 +216,16 @@ async function main() {
       await shot(page, `${name === "390px" ? "m" : "d"}${path.replace(/\//g, "_") || "_home"}`);
     }
   }
+
+  // 1b. error state with the RPC down
+  const down = await session("empty");
+  await down.route(RPC_GLOB, (route) => route.abort());
+  await down.goto(BASE + "/market", { waitUntil: "domcontentloaded" });
+  await down.getByRole("alert").first().waitFor({ timeout: 90000 });
+  const errText = await down.getByRole("alert").first().innerText();
+  step("RPC down: Market shows a readable error with Retry", /Could not load positions/.test(errText) && !RAW_SELECTOR.test(errText) && (await down.getByRole("button", { name: "Retry" }).count()) > 0, errText.replace(/\s+/g, " ").slice(0, 140));
+  await shot(down, "error-rpc-down");
+
 
   // 2. landing content and live stats against an independent chain scan
   await empty.goto(BASE + "/", { waitUntil: "domcontentloaded" });
@@ -342,19 +360,11 @@ async function main() {
   // 10. wizard for a wallet that already holds a position
   await holder.goto(BASE + "/start", { waitUntil: "domcontentloaded" });
   await holder.getByRole("heading", { name: "List it for sale" }).waitFor({ timeout: 90000 });
-  await settle(holder, 3000);
+  await holder.getByText(/You hold Deed #\d/).waitFor({ timeout: 90000 }).catch(() => {});
+  await settle(holder, 1500);
   const wz = await text(holder);
   step("wizard, holder: step 2 done, step 3 shows the list form", /You hold Deed #\d/.test(wz) && (await holder.getByRole("button", { name: "List for sale", exact: true }).count()) === 1);
   await shot(holder, "wizard-holder");
-
-  // 11. error state with the RPC down
-  const down = await session("empty");
-  await down.route(RPC_GLOB, (route) => route.abort());
-  await down.goto(BASE + "/market", { waitUntil: "domcontentloaded" });
-  await down.getByRole("alert").first().waitFor({ timeout: 90000 });
-  const errText = await down.getByRole("alert").first().innerText();
-  step("RPC down: Market shows a readable error with Retry", /Could not load positions/.test(errText) && !RAW_SELECTOR.test(errText) && (await down.getByRole("button", { name: "Retry" }).count()) > 0, errText.replace(/\s+/g, " ").slice(0, 140));
-  await shot(down, "error-rpc-down");
 
   await browser.close();
   const failed = results.filter((x) => !x.ok).length;
