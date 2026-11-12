@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Listed",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "seller",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "price"
+      },
+      {
+        "type": "uint64",
+        "name": "expiry"
+      },
+      {
+        "type": "uint256",
+        "name": "minICR"
+      },
+      {
+        "type": "bytes32",
+        "name": "snapshot"
+      }
+    ]
+  },
+  {
+    "name": "Cancelled",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "by",
+        "indexed": true
+      }
+    ]
+  },
+  {
+    "name": "Sold",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "seller",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "buyer",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "price"
+      }
+    ]
+  },
+  {
+    "name": "Claimed",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "seller",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "amount"
+      }
+    ]
+  }
+]

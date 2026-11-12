@@ -1,0 +1,75 @@
+[
+  {
+    "name": "Opened",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "controller",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "collateral"
+      },
+      {
+        "type": "uint256",
+        "name": "debt"
+      }
+    ]
+  },
+  {
+    "name": "CollateralAdded",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "amount"
+      }
+    ]
+  },
+  {
+    "name": "Repaid",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "amount"
+      }
+    ]
+  },
+  {
+    "name": "Withdrawn",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "amount"
+      }
+    ]
+  },
+  {
+    "name": "Closed",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "btcOut"
+      },
+      {
+        "type": "uint256",
+        "name": "musdOut"
+      }
+    ]
+  },
+  {
+    "name": "SurplusClaimed",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "btcOut"
+      }
+    ]
+  }
+]

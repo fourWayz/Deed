@@ -1,0 +1,31 @@
+[
+  {
+    "name": "PositionCreated",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "vault",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "owner",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "collateral"
+      },
+      {
+        "type": "uint256",
+        "name": "debt"
+      }
+    ]
+  }
+]
