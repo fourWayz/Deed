@@ -1,0 +1,22 @@
+{
+  "name": "deed-indexer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "migrate": "node src/cli.js migrate",
+    "sync": "node src/cli.js sync",
+    "once": "node src/cli.js sync --once",
+    "serve": "node src/cli.js serve",
+    "start": "node src/cli.js run",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.12"
+  }
+}
