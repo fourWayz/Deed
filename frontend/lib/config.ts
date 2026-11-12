@@ -12,6 +12,7 @@ export const ADDR = {
   // Mezo testnet, checked on chain (docs/mezo-notes.md)
   musd: "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503" as Address,
   priceFeed: "0x86bCF0841622a5dAC14A313a15f96A95421b9366" as Address,
+  troveManager: "0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0" as Address,
   hintHelpers: "0x4e4cBA3779d56386ED43631b4dCD6d8EacEcBCF6" as Address,
   sortedTroves: "0x722E4D24FD6Ff8b0AC679450F3D91294607268fA" as Address,
 };
@@ -19,6 +20,18 @@ export const ADDR = {
 export const ZERO = zero;
 export const deployed = ADDR.deed !== zero && ADDR.factory !== zero && ADDR.market !== zero && ADDR.auction !== zero;
 export const EXPLORER = "https://explorer.test.mezo.org";
+export const FAUCET = "https://faucet.test.mezo.org/";
+
+// Protocol fee in basis points charged on a sale. The v2 contracts take no fee, so this stays 0 until v3 addresses
+// (and the fee they charge) are put in the env. It only drives the preview, the contract decides what is charged.
+const bps = Number(process.env.NEXT_PUBLIC_FEE_BPS ?? "0");
+export const FEE_BPS = Number.isFinite(bps) && bps >= 0 && bps <= 10_000 ? BigInt(Math.round(bps)) : 0n;
+// mp4 or Vimeo player url for the landing page, empty shows the placeholder
+export const VIDEO_URL = process.env.NEXT_PUBLIC_DEMO_VIDEO ?? "";
+// base url of the indexer api, empty means stats are read straight from chain logs
+export const INDEXER_URL = (process.env.NEXT_PUBLIC_INDEXER_URL ?? "").replace(/\/$/, "");
+// true once the vault in use has borrow-more and refinance (v3), the v2 vault has neither
+export const VAULT_HAS_BORROW = process.env.NEXT_PUBLIC_VAULT_V3 === "1";
 export const GAS_COMP = 200n * 10n ** 18n;
 export const MCR = 11n * 10n ** 17n;
 
@@ -112,6 +125,20 @@ export const auctionAbi = parseAbi([
   "error NothingToClaim()",
   "error TransferFailed()",
   "error Reentrancy()",
+]);
+
+export const troveManagerAbi = parseAbi([
+  "function checkRecoveryMode(uint256 price) view returns (bool)",
+  "function getTCR(uint256 price) view returns (uint256)",
+  "function getEntireDebtAndColl(address borrower) view returns (uint256 coll, uint256 principal, uint256 interest, uint256 pendingColl, uint256 pendingPrincipal, uint256 pendingInterest)",
+]);
+
+export const eventsAbi = parseAbi([
+  "event PositionCreated(uint256 indexed tokenId, address indexed vault, address indexed owner, uint256 collateral, uint256 debt)",
+  "event Listed(uint256 indexed tokenId, address indexed seller, uint256 price, uint64 expiry, uint256 minICR, bytes32 snapshot)",
+  "event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price)",
+  "event Started(uint256 indexed tokenId, address indexed seller, bool byOwner, uint256 startPrice, uint256 floorPrice, uint64 duration)",
+  "event Won(uint256 indexed tokenId, address indexed seller, address indexed winner, uint256 price, uint256 topUp)",
 ]);
 
 export const erc20Abi = parseAbi([

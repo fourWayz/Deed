@@ -1,5 +1,5 @@
 import type { Address, PublicClient } from "viem";
-import { ADDR, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi, spotAbi } from "./config";
+import { ADDR, ZERO, GAS_COMP, deedAbi, factoryAbi, vaultAbi, marketAbi, auctionAbi, priceFeedAbi, spotAbi, troveManagerAbi } from "./config";
 import { priceSourceInRange } from "./priceSource";
 
 export type Listing = { seller: Address; expiry: bigint; price: bigint; minICR: bigint; snapshot: `0x${string}` };
@@ -24,7 +24,11 @@ export type Position = {
   rate: number;
   // live numbers with interest and pending rewards
   liveColl: bigint;
+  // entire debt: principal plus accrued interest plus pending redistribution, this is what ICR is measured against
   debt: bigint;
+  interest: bigint;
+  // the part of the entire debt that came from other liquidations and is not stored on the trove yet
+  pendingDebt: bigint;
   icr: bigint | null;
   equity: bigint | null;
   listing: Listing | null;
@@ -40,7 +44,11 @@ export type Snapshot = {
   minFloorBps: bigint;
   // false when the DEX price is further from the oracle than the auction allows, null when it could not be checked
   priceSourceOk: boolean | null;
+  recovery: RecoveryInfo;
 };
+
+// Mezo Recovery Mode: total collateral ratio under 150%. active is null when the oracle was stale and it could not be read.
+export type RecoveryInfo = { active: boolean | null; tcr: bigint | null };
 
 const MAX_POSITIONS = 60;
 
@@ -76,11 +84,24 @@ export async function loadPositions(client: PublicClient): Promise<Snapshot> {
     }
   }
 
+  let recovery: RecoveryInfo = { active: null, tcr: null };
+  if (price !== null) {
+    try {
+      const [active, tcr] = await Promise.all([
+        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "checkRecoveryMode", args: [price] }),
+        client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getTCR", args: [price] }),
+      ]);
+      recovery = { active, tcr };
+    } catch {
+      // unknown, the contracts still enforce Mezo's rules
+    }
+  }
+
   const ids: bigint[] = [];
   for (let i = last; i >= first; i--) ids.push(BigInt(i));
 
   const positions = await Promise.all(ids.map((id) => loadOne(client, id, price)));
-  return { positions, price, rescueICR, safeICR, minFloorBps, priceSourceOk };
+  return { positions, price, rescueICR, safeICR, minFloorBps, priceSourceOk, recovery };
 }
 
 async function loadOne(client: PublicClient, id: bigint, price: bigint | null): Promise<Position> {
@@ -91,12 +112,15 @@ async function loadOne(client: PublicClient, id: bigint, price: bigint | null): 
     client.readContract({ address: ADDR.market, abi: marketAbi, functionName: "listings", args: [id] }),
     client.readContract({ address: ADDR.auction, abi: auctionAbi, functionName: "auctions", args: [id] }),
   ]);
-  const [trove, live] = await Promise.all([
+  const [trove, live, entire] = await Promise.all([
     client.readContract({ address: vault, abi: vaultAbi, functionName: "troveState" }),
     client.readContract({ address: vault, abi: vaultAbi, functionName: "liveState" }),
+    client.readContract({ address: ADDR.troveManager, abi: troveManagerAbi, functionName: "getEntireDebtAndColl", args: [vault] }),
   ]);
   const [status, coll, principal, rate] = trove;
   const [liveColl, debt] = live;
+  const interest = entire[2];
+  const pendingDebt = entire[4] + entire[5];
 
   let icr: bigint | null = null;
   let equity: bigint | null = null;
@@ -120,6 +144,8 @@ async function loadOne(client: PublicClient, id: bigint, price: bigint | null): 
     rate,
     liveColl,
     debt,
+    interest,
+    pendingDebt,
     icr,
     equity,
     listing: lSeller === ZERO ? null : { seller: lSeller, expiry, price: lPrice, minICR, snapshot },
