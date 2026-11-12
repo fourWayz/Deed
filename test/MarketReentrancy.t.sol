@@ -120,7 +120,9 @@ contract MarketReentrancyTest is Base {
     function _init() internal override {
         evil = new EvilToken();
         market = new DeedMarket(
-            deed, factory, ITroveManager(address(mezo)), IPriceFeed(address(mezo)), IMUSD(address(evil))
+            deed, factory, ITroveManager(address(mezo)), IPriceFeed(address(mezo)), IMUSD(address(evil)),
+            treasury,
+            0
         );
         deed.init(address(factory), address(market), address(0xA11C));
     }
