@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { animate, stagger } from "animejs";
 import { EXPLORER } from "@/lib/config";
+import { cleanMessage } from "@/lib/format";
 import type { TxState } from "@/lib/useTx";
 
 /** Fades children in with a small stagger when they first show up. */
@@ -129,11 +130,11 @@ export function Skeletons({ n = 3 }: { n?: number }) {
   );
 }
 
-export function ErrorBox({ error, retry }: { error: unknown; retry: () => void }) {
-  const msg = (error as { shortMessage?: string; message?: string })?.shortMessage ?? (error as Error)?.message ?? "Failed to load";
+export function ErrorBox({ error, retry, what = "positions" }: { error: unknown; retry: () => void; what?: string }) {
+  const msg = cleanMessage((error as { shortMessage?: string; message?: string })?.shortMessage ?? (error as Error)?.message);
   return (
-    <div className="notice err">
-      Could not load positions: {msg}{" "}
+    <div className="notice err" role="alert">
+      Could not load {what}: {msg}{" "}
       <button className="btn ghost" style={{ marginLeft: 10, padding: "6px 12px" }} onClick={retry}>
         Retry
       </button>

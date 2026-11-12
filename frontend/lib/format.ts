@@ -76,5 +76,22 @@ export function errMessage(e: unknown): string {
   const inner = err.walk?.((x) => !!(x as { data?: { errorName?: string } })?.data?.errorName);
   const name = inner?.data?.errorName;
   if (name && FRIENDLY[name]) return FRIENDLY[name];
-  return err.shortMessage ?? err.message ?? "Something went wrong";
+  return cleanMessage(err.shortMessage ?? err.message);
+}
+
+/**
+ * Wallet and RPC errors sometimes carry a bare 4-byte selector or a wall of request details. People should get a sentence,
+ * never `0x1f2a3b4c`, so anything with that shape is replaced.
+ */
+export function cleanMessage(raw: string | undefined): string {
+  if (!raw) return "Something went wrong. Try again.";
+  if (/0x[0-9a-fA-F]{8}\b/.test(raw) && !/0x[0-9a-fA-F]{9,}/.test(raw.replace(/0x[0-9a-fA-F]{8}\b/g, ""))) {
+    return "The contract refused this action. Refresh the numbers and try again.";
+  }
+  if (/User rejected|User denied|rejected the request/i.test(raw)) return "You rejected the request in your wallet.";
+  if (/reverted with the following signature|unrecognized selector|custom error/i.test(raw)) {
+    return "The contract refused this action. Refresh the numbers and try again.";
+  }
+  const first = raw.split("\n")[0].trim();
+  return first.length > 160 ? `${first.slice(0, 157)}…` : first;
 }
