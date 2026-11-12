@@ -89,7 +89,9 @@ export function cleanMessage(raw: string | undefined): string {
     return "The contract refused this action. Refresh the numbers and try again.";
   }
   if (/User rejected|User denied|rejected the request/i.test(raw)) return "You rejected the request in your wallet.";
-  if (/reverted with the following signature|unrecognized selector|custom error/i.test(raw)) {
+  const reason = raw.match(/reverted with the following reason:\s*\n?\s*([^\n]+)/i);
+  if (reason) return `The contract refused this action: ${reason[1].trim()}`;
+  if (/reverted with the following signature|unrecognized selector|custom error|reverted/i.test(raw)) {
     return "The contract refused this action. Refresh the numbers and try again.";
   }
   const first = raw.split("\n")[0].trim();

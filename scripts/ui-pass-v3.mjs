@@ -265,7 +265,7 @@ async function main() {
   const rows = await holder.locator(".breakdown > div b").allInnerTexts();
   const nums = rows.map((r) => Number(r.replace(/[^\d.]/g, "")));
   step("debt breakdown rows add up to the entire debt", Math.abs(nums[0] + nums[1] + nums[2] - debtShown) < 0.02, `${nums.slice(0, 3).join(" + ")} vs ${debtShown}`);
-  step("health gauge is on screen", (await holder.locator(".gauge svg").count()) === 1 && /%/.test(await holder.locator(".gauge svg text").first().innerText()));
+  step("health gauge is on screen", (await holder.locator(".gauge svg").count()) === 1 && /%/.test(await holder.locator(".gauge svg text").first().textContent()));
   const pageText = await text(holder);
   step("borrow and refinance explain that v2 vaults cannot", /no borrow or refinance function/.test(pageText) && (await holder.getByRole("button", { name: "Borrow", exact: true }).isDisabled()) && (await holder.getByRole("button", { name: "Refinance to current rate", exact: true }).isDisabled()));
   await fill(holder, "Price (MUSD)", "50");
@@ -300,6 +300,14 @@ async function main() {
   // 7. real transactions through useSafeWrite: list and cancel Deed #2
   await holder.goto(BASE + "/position/2", { waitUntil: "domcontentloaded" });
   await holder.getByRole("heading", { name: "Sell at a fixed price" }).waitFor({ timeout: 90000 });
+  // a listing left by an interrupted earlier run is cleared first, through the same UI
+  await settle(holder, 2500);
+  if (await holder.getByRole("button", { name: "Cancel listing", exact: true }).count()) {
+    const c0 = await tx(holder, "Cancel listing");
+    step("leftover listing from an earlier run cleared from the UI", c0.verdict === "ok", c0.text);
+    await holder.reload({ waitUntil: "domcontentloaded" });
+    await holder.getByRole("heading", { name: "Sell at a fixed price" }).waitFor({ timeout: 90000 });
+  }
   await fill(holder, "Price (MUSD)", "5");
   await fill(holder, "Promised min ICR (%)", "110");
   await fill(holder, "Listing length (days)", "1");
