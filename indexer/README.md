@@ -135,3 +135,9 @@ Runs against an in-process Postgres (`@electric-sql/pglite`), so no database is 
 type, volume and wallet extraction, replaying a range twice, restarting with a lost cursor, batch size independence, a
 reorg that removes a `Sold` and replaces it with a `Cancelled`, and vault events created in the same batch as the vault.
 The sync tests use a fake chain, so they show the logic, not the behaviour of Mezo's real RPC.
+
+## Live check
+
+`node scripts/live-smoke.mjs` syncs the real v2 deployment from Mezo testnet into an in-process Postgres and prints the
+stats. On 2026-11-12 it indexed 3 positions, 6 listings, 2 sales, 3 auctions and 2 rescues in about 3 minutes, and the owners
+of tokens 1 to 3 matched `DeedNFT.ownerOf` on chain. It was not run against a real Supabase database.
