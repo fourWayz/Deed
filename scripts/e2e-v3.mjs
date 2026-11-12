@@ -156,6 +156,23 @@ async function hints(coll, principal) {
   }
 }
 
+/** the two wallets share test funds: top up one from the other when it is short, so a run needs no manual steps */
+const other = { seller: "buyer", buyer: "seller" };
+async function ensureMusd(who, amount) {
+  const have = await musdOf(accounts[who].address);
+  if (have >= amount) return;
+  await send(other[who], `${other[who]} sends ${e18(amount - have)} MUSD to ${who}`, { to: sys.musd, abi: abi.erc20, fn: "transfer", args: [accounts[who].address, amount - have] });
+}
+async function ensureBtc(who, amount) {
+  const have = await pub.getBalance({ address: accounts[who].address });
+  if (have >= amount) return;
+  const hash = await wallets[other[who]].sendTransaction({ to: accounts[who].address, value: amount - have, gas: 100000n });
+  const r = await pub.waitForTransactionReceipt({ hash, timeout: 240_000 });
+  if (r.status !== "success") throw new Error("btc transfer failed");
+  log.push({ who: other[who], label: `${other[who]} sends ${e18(amount - have)} BTC to ${who}`, hash, status: r.status, block: Number(r.blockNumber) });
+  say(`  ok ${other[who]} sends ${e18(amount - have)} BTC to ${who}  ${hash}`);
+}
+
 const lensOf = (id) => read(v3.lens, abi.lens, "position", [id]);
 
 async function approve(who, spender, amount, name) {
@@ -196,6 +213,7 @@ async function main() {
   // ---------- borrow, refinance, fee-bearing sale, closeTrove ----------
   if (STEPS.includes("borrow") || STEPS.includes("sale")) {
     say("\n[1] open position A (about 150% ICR)");
+    await ensureBtc("seller", collFor(DEBT, price0, 1500n) + 5n * 10n ** 15n);
     const a = await open("seller", "seller opens position A", collFor(DEBT, price0, 1500n), DEBT);
     const A = a.id;
     const l0 = await lensOf(A);
@@ -258,6 +276,7 @@ async function main() {
     const lc = await lensOf(A);
     const needed = lc.debt - 200n * 10n ** 18n;
     say(`  entire debt ${e18(lc.debt)}, MUSD to pay ${e18(needed)}`);
+    await ensureMusd("buyer", needed + 10n ** 18n);
     await approve("buyer", a.vault, needed + 10n ** 18n, "the vault");
     const btcBefore = await pub.getBalance({ address: accounts.buyer.address });
     const mBefore = await musdOf(accounts.buyer.address);
@@ -275,6 +294,7 @@ async function main() {
   if (STEPS.includes("rescue")) {
     say("\n[5] rescue auction with the time weighted price guard");
     const price1 = await read(sys.priceFeed, abi.feed, "fetchPrice");
+    await ensureBtc("seller", collFor(DEBT, price1, 1170n) + 5n * 10n ** 15n);
     const b = await open("seller", "seller opens position B (about 117%)", collFor(DEBT, price1, 1170n), DEBT);
     const B = b.id;
     const lb = await lensOf(B);
@@ -323,6 +343,7 @@ async function main() {
     };
     // recover the collateral: the winner closes the position
     const need2 = la.debt - 200n * 10n ** 18n;
+    await ensureMusd("buyer", need2 + 10n ** 18n);
     await approve("buyer", b.vault, need2 + 10n ** 18n, "the vault");
     await send("buyer", "winner closes position B through the vault", { to: b.vault, abi: abi.vault, fn: "close" });
   }
@@ -332,6 +353,7 @@ async function main() {
     say("\n[6] claimCollateral: a redemption closes a trove, the vault claims the surplus");
     const p = await read(sys.priceFeed, abi.feed, "fetchPrice");
     // as low an ICR as safe, so a redemption reaches this trove before any other
+    await ensureBtc("seller", collFor(DEBT, p, 1110n) + 5n * 10n ** 15n);
     const c = await open("seller", "seller opens position C (about 111%)", collFor(DEBT, p, 1110n), DEBT);
     const lcc = await lensOf(c.id);
     say(`  Deed #${c.id} vault ${c.vault} coll ${e18(lcc.collateral)} debt ${e18(lcc.debt)} ICR ${pct(lcc.icr)}`);
@@ -343,6 +365,7 @@ async function main() {
       results.claim = { skipped: `another trove (${first}) has a lower ICR, a redemption would hit it first` };
       say("  SKIPPED: another trove would be redeemed first");
     } else {
+      await ensureMusd("buyer", amount);
       const redeemerBtc0 = await pub.getBalance({ address: accounts.buyer.address });
       await send("buyer", "buyer redeems exactly this trove's net debt", {
         to: sys.troveManager,
