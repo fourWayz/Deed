@@ -19,7 +19,9 @@ contract MarketBase is Base {
 
     function _init() internal virtual override {
         market = new DeedMarket(
-            deed, factory, ITroveManager(address(mezo)), IPriceFeed(address(mezo)), IMUSD(address(musd))
+            deed, factory, ITroveManager(address(mezo)), IPriceFeed(address(mezo)), IMUSD(address(musd)),
+            treasury,
+            0
         );
         deed.init(address(factory), address(market), address(0xA11C));
     }

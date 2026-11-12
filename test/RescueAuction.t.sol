@@ -50,7 +50,9 @@ contract AuctionBase is Base {
         spot = new MockSpot();
         spot.set(80_000e18);
         market = new DeedMarket(
-            deed, factory, ITroveManager(address(mezo)), IPriceFeed(address(mezo)), IMUSD(address(musd))
+            deed, factory, ITroveManager(address(mezo)), IPriceFeed(address(mezo)), IMUSD(address(musd)),
+            treasury,
+            0
         );
         auction = new RescueAuction(
             deed,
@@ -61,7 +63,9 @@ contract AuctionBase is Base {
             IMUSD(address(musd)),
             RESCUE_ICR,
             SAFE_ICR,
-            500
+            500,
+            treasury,
+            0
         );
         deed.init(address(factory), address(market), address(auction));
     }
@@ -549,11 +553,11 @@ contract RescueAuctionTest is AuctionBase {
         IPriceFeed pf = IPriceFeed(address(mezo));
         ITroveManager tm = ITroveManager(address(mezo));
         vm.expectRevert(RescueAuction.BadParams.selector);
-        new RescueAuction(deed, factory, tm, pf, spot, IMUSD(address(musd)), 1.1e18, 1.8e18, 500);
+        new RescueAuction(deed, factory, tm, pf, spot, IMUSD(address(musd)), 1.1e18, 1.8e18, 500, treasury, 0);
         vm.expectRevert(RescueAuction.BadParams.selector);
-        new RescueAuction(deed, factory, tm, pf, spot, IMUSD(address(musd)), 1.5e18, 1.5e18, 500);
+        new RescueAuction(deed, factory, tm, pf, spot, IMUSD(address(musd)), 1.5e18, 1.5e18, 500, treasury, 0);
         vm.expectRevert(RescueAuction.BadParams.selector);
-        new RescueAuction(deed, factory, tm, pf, spot, IMUSD(address(musd)), 1.5e18, 1.8e18, 0);
+        new RescueAuction(deed, factory, tm, pf, spot, IMUSD(address(musd)), 1.5e18, 1.8e18, 0, treasury, 0);
     }
 
     // --- dex adapter ---

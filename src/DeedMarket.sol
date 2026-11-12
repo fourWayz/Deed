@@ -9,9 +9,11 @@ import {PositionVault} from "./PositionVault.sol";
 /// @notice Fixed price sales of positions, paid in MUSD.
 /// Listing locks the Deed, so the seller cannot touch the vault until the sale ends.
 /// The buyer names the exact position state they expect and the sale reverts if it differs.
-/// No owner, no fee, no admin functions.
+/// The fee is a fixed share of the sale price, set at deploy, capped at 1%, paid to an immutable treasury.
+/// No owner, no admin functions, nothing that can change the fee or the treasury.
 contract DeedMarket {
     uint256 public constant MCR = 1.1e18;
+    uint256 public constant MAX_FEE_BPS = 100;
 
     struct Listing {
         address seller;
@@ -26,9 +28,12 @@ contract DeedMarket {
     ITroveManager public immutable troveManager;
     IPriceFeed public immutable priceFeed;
     IMUSD public immutable musd;
+    // share of every sale price, in basis points, and who receives it
+    uint256 public immutable feeBps;
+    address public immutable treasury;
 
     mapping(uint256 => Listing) public listings;
-    // sale proceeds wait here until the seller pulls them
+    // sale proceeds and fees wait here until the owner of the balance pulls them
     mapping(address => uint256) public claimable;
 
     uint256 private _status = 1;
@@ -36,6 +41,7 @@ contract DeedMarket {
     error NotOwner();
     error NotListed();
     error AlreadyListed();
+    error BadParams();
     error BadPrice();
     error BadExpiry();
     error BadMinICR();
@@ -52,8 +58,8 @@ contract DeedMarket {
 
     event Listed(uint256 indexed tokenId, address indexed seller, uint256 price, uint64 expiry, uint256 minICR, bytes32 snapshot);
     event Cancelled(uint256 indexed tokenId, address indexed by);
-    event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price);
-    event Claimed(address indexed seller, uint256 amount);
+    event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price, uint256 fee);
+    event Claimed(address indexed account, uint256 amount);
 
     modifier nonReentrant() {
         if (_status != 1) revert Reentrancy();
@@ -62,7 +68,18 @@ contract DeedMarket {
         _status = 1;
     }
 
-    constructor(DeedNFT deed_, DeedFactory factory_, ITroveManager troveManager_, IPriceFeed priceFeed_, IMUSD musd_) {
+    constructor(
+        DeedNFT deed_,
+        DeedFactory factory_,
+        ITroveManager troveManager_,
+        IPriceFeed priceFeed_,
+        IMUSD musd_,
+        address treasury_,
+        uint256 feeBps_
+    ) {
+        if (treasury_ == address(0) || feeBps_ > MAX_FEE_BPS) revert BadParams();
+        treasury = treasury_;
+        feeBps = feeBps_;
         deed = deed_;
         factory = factory_;
         troveManager = troveManager_;
@@ -116,11 +133,14 @@ contract DeedMarket {
         if (icr < l.minICR) revert IcrTooLow(icr, l.minICR);
 
         delete listings[tokenId];
-        claimable[l.seller] += l.price;
+        // the fee rounds down, and the seller gets the rest, so the two always add up to the price
+        uint256 fee = feeFor(l.price);
+        claimable[l.seller] += l.price - fee;
+        if (fee > 0) claimable[treasury] += fee;
 
         if (!musd.transferFrom(msg.sender, address(this), l.price)) revert TransferFailed();
         deed.settle(tokenId, msg.sender);
-        emit Sold(tokenId, l.seller, msg.sender, l.price);
+        emit Sold(tokenId, l.seller, msg.sender, l.price, fee);
     }
 
     function claim() external nonReentrant {
@@ -129,6 +149,11 @@ contract DeedMarket {
         claimable[msg.sender] = 0;
         if (!musd.transfer(msg.sender, amount)) revert TransferFailed();
         emit Claimed(msg.sender, amount);
+    }
+
+    /// @notice The fee taken from a sale at `price`. The seller receives `price - feeFor(price)`.
+    function feeFor(uint256 price) public view returns (uint256) {
+        return price * feeBps / 10_000;
     }
 
     /// @notice Hash of what a buyer is paying for. Debt here is the principal, since total debt grows every

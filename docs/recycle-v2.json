@@ -1,0 +1,32 @@
+[
+  {
+    "label": "buyer sends MUSD to seller for the closes",
+    "hash": "0x8fce6c0db7c8f362e152625bfdf0ef25fd38b4f637606cf69dd231feebadc2d7",
+    "block": 16737092
+  },
+  {
+    "label": "seller approves MUSD for v2 vault #1",
+    "hash": "0x78e653073cc1b7f3cf4fc1acba987fff3fb8d011adc7d03646fdd9f51ea43089",
+    "block": 16737096
+  },
+  {
+    "label": "seller closes v2 position #1",
+    "hash": "0x2de0a53f2bf7ae2b775ef7663fece1947349ed7fc447a9718b0f14a635c2afad",
+    "block": 16737097
+  },
+  {
+    "label": "seller approves MUSD for v2 vault #2",
+    "hash": "0x56115aab5b36147cb4bec0a56ff7af6e00ab28dcd8d77101574b10c1330da446",
+    "block": 16737099
+  },
+  {
+    "label": "seller closes v2 position #2",
+    "hash": "0x8d479cdf33fb10af119cd6ffe454a95a8484436817ca15472642cc8b6a604d32",
+    "block": 16737101
+  },
+  {
+    "label": "buyer claims the surplus of v2 position #3 (closed by a redemption)",
+    "hash": "0xbfd470a738a736845b21fc248d765c60d4decfd51e8f466da29c604fd2f1d005",
+    "block": 16737103
+  }
+]
