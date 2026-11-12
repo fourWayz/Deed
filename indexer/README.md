@@ -6,15 +6,14 @@ computed from those rows.
 
 ## What it indexes
 
-| Deployment | Status | Source |
+| Deployment | Source of addresses and start block | ABIs |
 | --- | --- | --- |
-| `v2` | the deployment in the repo-root `deployments.json`, indexed from its first deploy block `16339552` | `abis/v2/*.json` |
-| `v3` | **not wired yet**. Needs the deployed addresses, a start block and `abis/v3/*.json` from the contracts session | `config/deployments.json` |
+| `v2` | `config/deployments.json`, from first deploy block `16339552` | `abis/v2/` (event-only, written from the source) |
+| `v3` | the repo-root `deployments.json` (`deployBlock`, `deedNFT`, `factory`, `market`, `auction`) | `abis/v3/`, copies of the compiled root `abis/` |
 
-While `v3` has no address, start block or ABI the indexer prints `v3: skipped (...)` and carries on with `v2`. To add
-it: put `DeedNFT.json`, `DeedFactory.json`, `DeedMarket.json`, `RescueAuction.json` (and `PositionVault.json`) in
-`abis/v3/`, fill the addresses and `startBlock` in `config/deployments.json`, and restart. Each deployment has its own
-cursor, so v3 backfills without touching v2.
+Each deployment has its own cursor. Contracts that emit nothing the API needs (`PairTwapPrice`, `DeedLens`) are not indexed.
+Fees: v3 `Sold.fee` and `Won.fee` are the treasury share of the gross `price`, so `fees_musd_wei` sums them and
+`volume_musd_wei` sums the gross prices. v2 has no fee.
 
 Per deployment it follows `DeedNFT`, `DeedFactory`, `DeedMarket`, `RescueAuction`, and also every `PositionVault` that
 `PositionCreated` announces (the vault events are how collateral and debt move).
@@ -141,3 +140,15 @@ The sync tests use a fake chain, so they show the logic, not the behaviour of Me
 `node scripts/live-smoke.mjs` syncs the real v2 deployment from Mezo testnet into an in-process Postgres and prints the
 stats. On 2026-11-12 it indexed 3 positions, 6 listings, 2 sales, 3 auctions and 2 rescues in about 3 minutes, and the owners
 of tokens 1 to 3 matched `DeedNFT.ownerOf` on chain. It was not run against a real Supabase database.
+
+## Independent check
+
+`node scripts/chain-scan.mjs` recomputes the stats without the indexer's ABIs, decoder or SQL: it hashes event signatures,
+reads raw logs and slices the data words by hand. On 2026-11-12 (blocks to 16740688) it matched the indexer exactly on
+positions (6), listings (11), sales (3), auctions started (4), rescues (3), unique wallets (2), volume
+(`2527240285832979884033`) and fees (`3190112384145783899`). Sync time from empty: v2 about 280 s, v3 about 7 s.
+
+## Hosting files
+
+`Dockerfile` (build from the repo root: `docker build -f indexer/Dockerfile -t deed-indexer .`) and `fly.toml` (one
+always-on machine, `/health` check). Untested: Docker is not usable in the dev environment.
