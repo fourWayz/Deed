@@ -49,25 +49,57 @@ npm run start               # API + sync loop in one process
 Other modes: `npm run once` (catch up to the head and exit, for a cron job), `npm run sync` (sync loop only),
 `npm run serve` (API only, for a second instance next to a separate sync worker).
 
-## Deployment
+## Deployment (no card needed)
 
-1. **Supabase.** Create a project, copy the connection string (Project settings, Database, Connection string, session
-   pooler) into `DATABASE_URL`. The schema is created by `npm run migrate`; there is no Supabase-specific setup. Row level
-   security is not enabled because the API talks to Postgres directly with the connection string. If you expose the
-   tables through Supabase's own REST layer, enable RLS first.
-2. **Long-running service** (Fly, Railway, Render, a VM): run `npm run start` with `DATABASE_URL`, `PORT` set. One
-   process serves the API and keeps syncing. Run exactly one syncing process per database; two would only waste RPC
-   calls (rows stay correct, because inserts are idempotent).
-3. **Or a scheduled job** (cron, GitHub Actions, Railway cron): run `npm run once` every minute or so, and run
-   `npm run serve` as the API.
-4. **Rate limit and CORS.** Any origin may `GET` (and `OPTIONS` preflight). Each client gets `RATE_LIMIT_PER_MIN` (default 120)
-   requests a minute, then `429` with `Retry-After`. `/health` is exempt. The client is `fly-client-ip` when present (Fly
-   sets it), otherwise the socket address; `x-forwarded-for` is ignored because a client can forge it. The counter is in
-   memory, so it is per process and resets on restart.
-5. First sync of v2 reads about 400k blocks in 9000-block batches. Expect a few minutes.
+Two pieces, both free-tier friendly: a **GitHub Actions cron** keeps the database current, and a **Vercel project** serves
+the read API from it. The database is the only shared state, so either side can restart or redeploy freely.
 
-Environment: `DATABASE_URL` (required), `MEZO_TESTNET_RPC`, `PORT` (8787), `BATCH_BLOCKS` (9000, max 10000),
-`POLL_MS` (4000), `CONFIRMATIONS` (1). Secrets stay in `.env`, which is git-ignored.
+### 1. Supabase
+Create a project and use its **transaction pooler** URI (port **6543**). That is the `DATABASE_URL` for everything below.
+`npm run migrate` (or the first sync) creates the schema; there is no Supabase-specific setup. Row level security is off
+because the API connects directly with the connection string; do not expose these tables through Supabase's own REST layer
+without enabling it. TLS and port details are under "Supabase notes".
+
+### 2. Sync: `.github/workflows/indexer-sync.yml`
+Runs `npm run once` in `indexer/` every 5 minutes and on **Run workflow**. One run at a time (`concurrency` group
+`indexer-sync`, queued, never cancelled), 20 minute timeout. `once` resumes from the stored cursor, reads only blocks newer
+than it, touches the cursor so `lastSyncedAt` moves even when nothing is new, and **exits 1 on any RPC or database
+error** so the run turns red. A pass with nothing new made no `eth_getLogs` call in the tests; against Supabase it took
+about 26 s, almost all of it database round trips. The very first sync from empty takes about 7 minutes, inside the
+timeout.
+
+GitHub repository secrets (Settings, Secrets and variables, Actions, **Repository secrets**), exact names:
+
+| Secret | Value |
+| --- | --- |
+| `DATABASE_URL` | Supabase transaction pooler URI, port 6543 |
+| `MEZO_TESTNET_RPC` | `https://rpc.test.mezo.org` |
+
+GitHub can delay scheduled runs and disables them after 60 days without repository activity; a missed run is simply caught
+up by the next one.
+
+### 3. API: Vercel project with root directory `indexer/`
+`api/index.js` is one serverless function and `vercel.json` rewrites `/positions`, `/positions/:id`, `/listings`,
+`/auctions`, `/activity`, `/stats` and `/health` to it, so the public paths are the ones in the API section below. It reuses
+the same query code as the standalone server, keeps a pool of **one** connection per warm instance, answers `GET` and
+`OPTIONS` with `access-control-allow-origin: *`, and sets `Cache-Control: public, s-maxage=15, stale-while-revalidate=60` on
+successful responses (errors and `/health` are `no-store`). There is no in-memory rate limit there: the CDN cache absorbs
+repeat requests.
+
+Vercel settings: Root Directory `indexer`, Framework Preset `Other`, no build command. Environment variable (Production and
+Preview): `DATABASE_URL`, the same transaction pooler URI. The function never runs migrations, so the sync job must have
+run at least once before the API returns data.
+
+`/stats` and `/health` carry `lastSyncedAt`, the time of the last finished sync pass (`null` before the first).
+
+### 4. Optional: one long-running process
+`npm run start` runs the API and the sync loop together with the in-memory rate limit (`RATE_LIMIT_PER_MIN`, default 120
+per client, then `429` with `Retry-After`; `/health` exempt; client is `fly-client-ip` if present, else the socket address,
+and `x-forwarded-for` is ignored because a client can forge it). The `Dockerfile` packages this: build from the repo root with
+`docker build -f indexer/Dockerfile -t deed-indexer .`, run with `docker run -p 8787:8787 -e DATABASE_URL deed-indexer`. It was
+built and run locally with Docker (image about 441 MB) against Supabase on 2026-11-13: `/health` and `/stats` answered
+from the database and the sync loop resumed one block after the stored cursor. Run only one syncing process per database
+if you use this path next to the GitHub job; extra ones only waste RPC calls, because inserts are idempotent.
 
 ## API
 
@@ -152,11 +184,6 @@ reads raw logs and slices the data words by hand. On 2026-11-12 (blocks to 16740
 positions (6), listings (11), sales (3), auctions started (4), rescues (3), unique wallets (2), volume
 (`2527240285832979884033`) and fees (`3190112384145783899`). Sync time from empty: v2 about 280 s, v3 about 7 s.
 
-## Hosting files
-
-`Dockerfile` (build from the repo root: `docker build -f indexer/Dockerfile -t deed-indexer .`) and `fly.toml` (one
-always-on machine, `/health` check). Untested: Docker is not usable in the dev environment.
-
 ## Supabase notes (tested 2026-11-13)
 
 - **TLS.** The connection uses TLS with certificate verification **off** (`rejectUnauthorized: false` in `src/db.js`).
@@ -174,4 +201,4 @@ always-on machine, `/health` check). Untested: Docker is not usable in the dev e
   `6187563853191175201`).
 - **Restart.** After a SIGKILL of the running process, the next run started one block after the stored cursor. Rewinding the
   v3 cursor and replaying 54 stored events left the table at 139 events, 76 wallet rows and 0 duplicate keys.
-- Every start runs the idempotent migration, which adds about 8 s before the API listens.
+- Migrations are recorded in `schema_migrations`, so only the first start pays the schema cost (about 8 s over this link). A start that finds nothing new takes seconds.
