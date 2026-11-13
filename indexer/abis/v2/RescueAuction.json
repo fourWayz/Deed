@@ -1,0 +1,94 @@
+[
+  {
+    "name": "Started",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "seller",
+        "indexed": true
+      },
+      {
+        "type": "bool",
+        "name": "byOwner"
+      },
+      {
+        "type": "uint256",
+        "name": "startPrice"
+      },
+      {
+        "type": "uint256",
+        "name": "floorPrice"
+      },
+      {
+        "type": "uint64",
+        "name": "duration"
+      }
+    ]
+  },
+  {
+    "name": "Ended",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "by",
+        "indexed": true
+      }
+    ]
+  },
+  {
+    "name": "Won",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "seller",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "winner",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "price"
+      },
+      {
+        "type": "uint256",
+        "name": "topUp"
+      }
+    ]
+  },
+  {
+    "name": "Claimed",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "seller",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "amount"
+      }
+    ]
+  }
+]

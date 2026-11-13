@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Transfer",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      }
+    ]
+  },
+  {
+    "name": "Initialized",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "factory"
+      },
+      {
+        "type": "address",
+        "name": "market"
+      },
+      {
+        "type": "address",
+        "name": "auction"
+      }
+    ]
+  },
+  {
+    "name": "Lock",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "venue",
+        "indexed": true
+      }
+    ]
+  },
+  {
+    "name": "Unlock",
+    "type": "event",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "tokenId",
+        "indexed": true
+      }
+    ]
+  }
+]
