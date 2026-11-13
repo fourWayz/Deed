@@ -39,7 +39,8 @@ bundle: none of them is a secret, and none may become one. The values below are 
 | `NEXT_PUBLIC_START_BLOCK` | `16737425` |
 | `NEXT_PUBLIC_DEPLOYMENT_VERSION` | `v3` |
 | `NEXT_PUBLIC_WC_PROJECT_ID` | your own id from cloud.walletconnect.com (the app does not start without one) |
-| `NEXT_PUBLIC_INDEXER_URL` | the public indexer API url once there is one, leave unset until then |
+| `NEXT_PUBLIC_INDEXER_URL` | `https://deed-lovat.vercel.app` (the indexer follows v2 and v3, CORS is open) |
+| `NEXT_PUBLIC_TEAM_WALLETS` | `0x522bc0c3919ff823173ca4145feece905f772ffe,0xef05acadf5d3ff7e8e5f0be2515f2be351e225a6,0x4989CC7150a869D6b07540B54B96fD02c5e0537c` (public addresses, drives the "team's test wallets" label) |
 | `NEXT_PUBLIC_DEMO_VIDEO` | optional, mp4 or Vimeo player url |
 
 Without `NEXT_PUBLIC_INDEXER_URL` the activity numbers are counted from chain events in the browser, which works but is slow and

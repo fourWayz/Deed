@@ -5,7 +5,88 @@ Headless Chromium, wallets bridged from Node (the page gets a plain EIP-1193 pro
 from `.env` and are never printed). Script: `scripts/ui-pass-v3-live.mjs`. One new position, **Deed #4**, goes through its whole
 life with every step clicked in the UI. The first pass (against v2) is kept as an appendix at the end.
 
-## Result
+## Release candidate pass (13 Nov 2026)
+
+Second v3 pass, on the live indexer (`https://deed-lovat.vercel.app`, `NEXT_PUBLIC_INDEXER_URL`) and with two fresh positions. The
+indexer now follows v3, so the chain-count workaround is gone: every stat comes from the indexer, and the chain scan runs only when
+the API cannot be used (down, slow, wrong shape, or not following the current deployment). Raw results: `docs/ui-pass-v3-rc-a.json`
+(Deed #5), `-rc-d.json` (Deed #6), `-rc-surplus.json`, `-rc-surplus6.json`, `-rc-stats.json`.
+
+**Short version: open, borrow, refinance, list, buy and the claims ran green on two fresh positions. The rescue start, bid and close
+did not run on a fresh position, because a testnet redemption bot redeemed both positions within 3 to 4 blocks of the withdraw that
+made them rescuable.** That is a result about the testnet, not a UI fault, but it means the rescue-start, bid and close buttons were
+not clicked again in this pass. Their last UI run is Deed #4 in the section below.
+
+### What the two fresh positions did
+
+| Step | Deed #5 | Deed #6 |
+| --- | --- | --- |
+| open from the wizard (0.04 BTC, 1800 MUSD) | `0xc0077aabec468bc01d10aa03bcb4b2ce2fb5f9dc2045486e0278e8ef7dfceba0` | `0x18d59a7bab84088e81594d4ed21161c5d26f0d3c8a4b60ac6b10725e8969f17b` |
+| borrow 50 MUSD | `0x69048317747e1334a5ad5777341d78f158d50a6325b7d70c9a66978d9c7b7ed4` | `0x274847e313f262afd0267075edbd69231a568bf61caea88c18151aa1830c8794` |
+| refinance | `0xf5b6554d11a04f3229ae62a0f5b5256d0b82c036a0207d642aca4e45163c87f1` | `0x85ee171effcdf2f870759e18a04160d667d5ccbd4633d168214a9807f5936a78` |
+| list for 50 MUSD, default ICR untouched (137% on #5) | `0x18a4b2c45219decb21e0d44e4c5d6f1115e9b2bb4f2649c2758858acf9dd9883` | `0xe2b4428ad35d528c5db4bdd9e7bd3a7ef9cef8946f3aa4ece836f528aaa0fb1e` |
+| **buyer approves MUSD for the market** | `0xc7ca732e3230d2c6e2c84d69d56d61b2113dad534f48093397073fd25657d30b` | `0xfb8803c03c6b3a9417367e23fdcd0aa87cb9d5878ccc1588dd6ea90b2ccd32df` |
+| buy | `0xc1d5cfce334edb7e927b83c26a9f19fe7ecde31e1353dfb4a31b62b0608d1a3b` | `0x59dcb23e6e0de23d4ada6b78a3397772c6015979dd83f08e05f30e589a55d624` |
+| seller claims 49.75 MUSD | `0x3fce76c02d87ec4873f2998a06f2fbb9e6d70a75df090983f4a9987f310e0f24` | `0x12d2a83f80c86431072babae70ccc76ffb8213e465cc09c6700e13788fcda0bd` |
+| buyer withdraws collateral to 117% ICR | `0x786874fd432c0f182118c9b2627e2058a897b464d98a7868d7fb175cb4a14202` (block 16757667) | `0x3d593e7e7f531c94a2169faea5227a5aaca2abf9d78eac02c7c413341f48f68a` (block 16758318) |
+| **redeemed in full by a third party** (not ours) | `0x6571a3bc16550cfdb58e196751c8f83d7621f10dabdb646ba47bc24db19a0cc3` (block 16757670, 3 blocks later) | `0x7731a6138212cf50933c4acf21d93d6af501ef0c6ad4f95d45c5d0469f9a1863` (block 16758322, 4 blocks later) |
+| holder claims the surplus from the UI | `0x8317e853b7166aee98f97eddef6e9dc6948467939198526082c5ce7afb5e4c79` | `0x4b849f5b48b123f74e8362a8e2d4e432a3b424ad1079eace05ba1557d4d29168` |
+
+Every transaction of the pass is in this table, including the buyer's approval, because the script now writes each hash to the log
+and to the results file the moment it is sent. The redemptions come from `0xd13f…6c67`, the same address `docs/demo.md` records
+redeeming Deed #3.
+
+### The surplus claim now has a real run
+
+This was the one path that could not be tested before. Both positions were redeemed completely, so the holder had surplus, and the
+UI paid it out: the position page said "Closed by a redemption" and offered **Claim 0.00803 BTC** (the lens amount); after the click
+the lens surplus was 0 and the wallet had received 0.008033 of the 0.008033 BTC (less gas); after a reload the page said
+"Nothing to claim" with the button disabled. The same sequence passed on Deed #6 (0.008001 BTC). So the "claim surplus that pays out"
+item moves from "could not test" to tested, twice.
+
+### The three assertions that never had a green run
+
+| Assertion | Result |
+| --- | --- |
+| market card shows the buyer's fee line and the equity comparison | **green** on Deed #5 and Deed #6 (`You pay 50.00 MUSD. 0.25 MUSD of it is the protocol fee…`) |
+| wizard step 3 shows "is listed" | **green** on Deed #5 and Deed #6 |
+| auction card shows floor, time left, winner target ICR and the bid fee line | **still no green run.** It needs a live rescue auction, and both fresh positions were redeemed before one could start. |
+
+The wizard and market failures from the first v3 pass were test bugs (the page text was right); the new runs show that.
+
+### Why the rescue could not run, and what was tried
+
+The bot redeems the lowest-ICR trove in the system within a few blocks, and a position pushed under 120% is the lowest. The
+sorted list's bottom today is a crowd of other users' troves at about 120% (lowest 119.89%), so there is nothing below 117% to
+absorb it. Deed #4 survived the same 117% step earlier, so the bot is not constant. What was tried: the rescue page opened and
+connected before the withdraw and the start click straight after it (still too slow, the lens read right after the withdraw
+already said "redeemed"), and a retry on a second fresh position. What was not tried: a withdraw target just above the lowest other
+trove (`RESCUE_ICR=119.93` is in the script), because it needs about 0.03 BTC moved from one test wallet to the other so the
+opener has the 0.05 BTC the wizard asks for, and that transfer was blocked by the session's permission check. I did not look for a way around it.
+
+### Stats, indexer and labels
+
+- **Totals source.** Landing and Activity read `/stats` and `/activity` from the indexer. The page says "Totals come from the Deed
+  indexer" and "Last synced N ago" (from `lastSyncedAt`). v2 shows as "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume",
+  which matches an independent v2 chain scan.
+- **Label.** "Testnet activity from the team's test wallets." sits on every stats block until a wallet outside
+  `NEXT_PUBLIC_TEAM_WALLETS` shows up in the indexer's positions or activity. That rule has a unit test (`lib/outsider.test.ts`);
+  the label going away has not been seen in a browser because no outside wallet exists yet.
+- **Against `indexer/scripts/chain-scan.mjs`.** At the start of the session, indexer `/stats` and the scan matched on every field
+  (7 positions, 12 listings, 4 sales, 5 auctions, 4 rescues, 2 wallets, volume 3126.730579642058144555, fees 6.187563853191175201).
+  During the pass **the indexer's sync stalled at block 16755791 (13:57 UTC on 13 Nov, still there about 4.5 hours later when the pass ended)**, while
+  the chain moved on with Deeds #5 and #6. The scan then read 9 positions, volume 3226.73 and fees 6.6876, the indexer 7, 3126.73
+  and 6.19; the difference is exactly the two 50 MUSD sales. So the "pages equal chain-scan" check could not be satisfied at the
+  end, and the pass compared the pages with the indexer's own `/stats` (they matched) and recorded the gap here. The indexer's
+  GitHub Actions cron needs a look.
+- **Behind note.** Because a stalled sync makes every total too low, the page now says "The indexer is behind, so the newest
+  activity is not in these totals yet" when the last sync is older than 30 minutes.
+- **Behind note, verified.** A re-run of the stats phase on the rebuilt app (`-rc-stats2.json`, 11 of 11) showed the note with a sync 5 hours old; the
+  fresh-sync case is covered only by the assertion's other branch, not seen live.
+- **Indexer down.** With the API blocked, the page counted this deployment from the chain (6 positions, 1,337.51 MUSD, fees 6.69),
+  equal to an independent scan, and said the indexer did not answer.
+
+## Earlier v3 pass (Deed #4)
 
 Three runs, because the script was resumed after test bugs, not app bugs, stopped it. Raw logs: `docs/ui-pass-v3-live-run1.log`,
 `docs/ui-pass-v3-live-run2.json`, `docs/ui-pass-v3-live-run3.json`.
@@ -78,16 +159,17 @@ lens fields. It does not prove the lens computes them correctly during a real Re
 
 ## Could not be tested, and why
 
-- **A claim that pays out surplus.** Surplus exists only after a third party's full redemption of a trove, which cannot be caused on
-  demand. The UI shows "Nothing to claim" with a disabled button for closed and redeemed positions (tested). The claim itself was
-  exercised by the contracts session on Deed #3 of its run (`docs/demo.md`, tx `0x3a672efe…57fa67`), not through this UI.
+- **A claim that pays out surplus** is no longer on this list: the release candidate pass claimed real surplus through the UI on two positions (see above). The earlier
+  v3 pass could not, which is why this entry stays in its history.
 - **Close with pending redistribution debt.** It needs another trove to be liquidated while this one is open, which cannot be caused
   here. The close panel uses the lens's entire debt, which includes pending, and the contracts session has fork tests for it
   (`test/Redistribution.t.sol`). The breakdown's "pending" row was 0.00 in every live check.
-- **The indexer with v3 in it.** The indexer is not wired to v3 yet and has no public url. The pass ran against a local copy of its API
-  (its code, its tests untouched, run from my scratch directory) filled by a real sync of v2. Exercised: the API answering with v2 only
-  (page counts v3 from chain and shows the indexer's v2 history as "Earlier deployment"), and the API unreachable (page falls back to chain,
-  says so, shows no error). Not exercised: an indexer that has v3, so the totals-from-indexer branch has never run against real data.
+- **The indexer with v3 in it, against the chain scan at the end.** The indexer is live and follows v3 (release candidate pass). Pages matched its
+  `/stats`, and at the start of the session it matched `chain-scan.mjs` on every field. At the end its sync had stalled 4.5 hours, so the final
+  equality with the scan could not hold and was not shown (details above).
+- **Rescue start, bid and close on a fresh position** in the release candidate pass: both fresh positions were redeemed by a third party first.
+- **The auction-card assertion** has still never had a green run.
+- **The team label disappearing** in a browser: only the unit test covers it, no outside wallet exists yet.
 - **Stale oracle.** The oracle is fresh on testnet, the stale branch was not triggered.
 - **Price source guard.** The TWAP source was in range during the pass, so the "price source out of range" pause was not seen on v3.
   The same page code was tested by RPC rewriting in the v2 pass.

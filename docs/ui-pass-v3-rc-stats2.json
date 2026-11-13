@@ -1,0 +1,71 @@
+{
+  "base": "http://localhost:3111",
+  "indexer": "https://deed-lovat.vercel.app",
+  "position": "6",
+  "results": [
+    {
+      "name": "landing totals equal the indexer /stats (indexer behind the chain) (positions, volume, fees, wallets)",
+      "ok": true,
+      "detail": "ui 7 pos / 2 wallets / 3,126.73 MUSD / fees 6.19 MUSD; scan 9 / 2 / 3226.73 / 6.6876"
+    },
+    {
+      "name": "landing: indexer source, team-wallets label, last synced",
+      "ok": true,
+      "detail": "Last synced 5 h ago."
+    },
+    {
+      "name": "landing: a sync older than 30 minutes shows the 'indexer is behind' note, a fresh one does not",
+      "ok": true,
+      "detail": "last synced 2026-11-13T13:57:26.496Z, stale true"
+    },
+    {
+      "name": "landing: earlier deployment line matches an independent v2 scan",
+      "ok": true,
+      "detail": "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees."
+    },
+    {
+      "name": "activity totals equal the indexer /stats (indexer behind the chain) (positions, volume, fees, wallets, sales, rescues)",
+      "ok": true,
+      "detail": "{\"Positions opened\":\"7\",\"Volume\":\"3,126.73 MUSD\",\"Fees paid\":\"6.19 MUSD\",\"Unique wallets\":\"2\",\"Fixed price sales\":\"4\",\"Rescues won\":\"4\"}"
+    },
+    {
+      "name": "activity shows last synced from lastSyncedAt",
+      "ok": true,
+      "detail": "5 h ago (2026-11-13T13:57:26.496Z)"
+    },
+    {
+      "name": "activity carries the team-wallets label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "activity lists recent transactions with explorer links",
+      "ok": true,
+      "detail": "12 rows"
+    },
+    {
+      "name": "activity shows this run's sale and rescue with their amounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "indexer down: current deployment counted from chain, matches an independent scan",
+      "ok": true,
+      "detail": "ui 6 / 2 / 1,337.51 MUSD / 6.69 MUSD; chain 6 / 2 / 1337.51 / 6.6876"
+    },
+    {
+      "name": "indexer down: page says the indexer did not answer, keeps the team label, no last synced, no error box",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [],
+  "untested": [
+    "Indexer against scripts/chain-scan.mjs on the new positions: the indexer had not synced since 2026-11-13T13:57:26.496Z (at block 16755791/16755791, chain scan to 16759967), so the two could not be equal and the check was not run this time. The pages were compared with the indexer's own /stats instead. At block 16755791/16756229 the indexer and the scan were equal on every field (see docs/ui-pass-v3.md).",
+    "The 'team wallets' label going away: no wallet outside the team has used the contracts yet, so the branch that drops the label only has a unit test (lib/team.test.ts), not a browser run."
+  ],
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ],
+  "failed": 0
+}

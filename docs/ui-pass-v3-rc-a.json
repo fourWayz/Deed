@@ -1,0 +1,293 @@
+{
+  "base": "http://localhost:3111",
+  "indexer": "https://deed-lovat.vercel.app",
+  "position": "5",
+  "results": [
+    {
+      "name": "RPC down: Market shows a readable error with Retry",
+      "ok": true,
+      "detail": "Could not load positions: HTTP request failed. Retry"
+    },
+    {
+      "name": "route / at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route / at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /positions at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /positions at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /activity at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /activity at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /start at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /start at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing fee text shows the on-chain rates and the treasury",
+      "ok": false,
+      "detail": "Deed's fee: reading it from the contracts…"
+    },
+    {
+      "name": "landing labels the stats as the team's test wallets",
+      "ok": true,
+      "detail": "Testnet activity from the team's test wallets."
+    },
+    {
+      "name": "landing labels the earlier deployment",
+      "ok": true,
+      "detail": "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees."
+    },
+    {
+      "name": "landing takes its totals from the indexer, no fallback notice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows when the indexer last synced",
+      "ok": true,
+      "detail": "Last synced 50 min ago."
+    },
+    {
+      "name": "empty wallet sees the empty state on Positions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "wizard, empty wallet: step 1 open with faucet link, steps 2 and 3 locked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "wizard, funded wallet: step 1 done, step 2 open with the create form",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "open a position from the wizard (0.04 BTC, 1800 MUSD)",
+      "ok": false,
+      "detail": "card removed after the action, the chain check that follows decides"
+    },
+    {
+      "name": "new Deed minted to the opener",
+      "ok": true,
+      "detail": "Deed #5"
+    },
+    {
+      "name": "wizard moves to step 3 and shows the list form",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "list form default ICR is the position's ICR rounded down, capped at 150",
+      "ok": true,
+      "detail": "default 137%, lens icr 137.70%"
+    },
+    {
+      "name": "position page entire debt matches DeedLens",
+      "ok": true,
+      "detail": "ui 2001.8, lens 2001.8000"
+    },
+    {
+      "name": "debt breakdown rows add up to the entire debt",
+      "ok": true,
+      "detail": "2001.8 + 0 + 0 vs 2001.8"
+    },
+    {
+      "name": "health gauge renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "borrow preview shows the fee and the new ICR",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "borrow 50 MUSD from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: wallet received 50 MUSD and the debt rose by 50 plus the borrowing fee",
+      "ok": true,
+      "detail": "received 50, debt +50.0500"
+    },
+    {
+      "name": "refinance to the current rate from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: position still active after refinance, rate now matches the system",
+      "ok": true,
+      "detail": "rate 100 -> 100 bps, debt 2051.850 -> 2052.220"
+    },
+    {
+      "name": "list form fee preview: 0.50% of 50 is 0.25, seller receives 49.75",
+      "ok": true,
+      "detail": "Fee 0.25 MUSD, taken from the sale. You receive 49.75 MUSD."
+    },
+    {
+      "name": "fee preview equals the contract's feeFor",
+      "ok": true,
+      "detail": "feeFor(50) = 0.25"
+    },
+    {
+      "name": "list from the wizard with the untouched default ICR",
+      "ok": false,
+      "detail": "card removed after the action, the chain check that follows decides"
+    },
+    {
+      "name": "wizard step 3 shows listed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "market card shows the buyer's fee line and the equity comparison",
+      "ok": true,
+      "detail": "You pay 50.00 MUSD. 0.25 MUSD of it is the protocol fee, paid out of the seller's side, nothing extr"
+    },
+    {
+      "name": "buy the listing from the UI (approve then buy)",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: Deed now belongs to the buyer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chain: seller credited 49.75, treasury credited 0.25",
+      "ok": true,
+      "detail": "seller +49.75, treasury +0.25"
+    },
+    {
+      "name": "seller claims the proceeds from the UI (Claim 49.75 MUSD (market))",
+      "ok": true,
+      "detail": "card removed after the action, the chain check that follows decides"
+    },
+    {
+      "name": "chain: wallet received the proceeds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated, close blocked): banner and disabled buttons follow DeedLens",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [
+    {
+      "who": "alice",
+      "to": "0xb8602DBF0e5BBDE81C504C87F860fbbe7DF125CD",
+      "selector": "0x537272f0",
+      "pageGas": "3329770",
+      "hash": "0xc0077aabec468bc01d10aa03bcb4b2ce2fb5f9dc2045486e0278e8ef7dfceba0"
+    },
+    {
+      "who": "alice",
+      "to": "0x37E88A5D7397719e643e7927fCE25eA3E0DB1395",
+      "selector": "0xd5164184",
+      "pageGas": "700000",
+      "hash": "0x69048317747e1334a5ad5777341d78f158d50a6325b7d70c9a66978d9c7b7ed4"
+    },
+    {
+      "who": "alice",
+      "to": "0x37E88A5D7397719e643e7927fCE25eA3E0DB1395",
+      "selector": "0xdc1cdb2c",
+      "pageGas": "700000",
+      "hash": "0xf5b6554d11a04f3229ae62a0f5b5256d0b82c036a0207d642aca4e45163c87f1"
+    },
+    {
+      "who": "alice",
+      "to": "0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd",
+      "selector": "0x218160aa",
+      "pageGas": "700000",
+      "hash": "0x18a4b2c45219decb21e0d44e4c5d6f1115e9b2bb4f2649c2758858acf9dd9883"
+    },
+    {
+      "who": "bob",
+      "to": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
+      "selector": "0x095ea7b3",
+      "pageGas": "700000",
+      "hash": "0xc7ca732e3230d2c6e2c84d69d56d61b2113dad534f48093397073fd25657d30b"
+    },
+    {
+      "who": "bob",
+      "to": "0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd",
+      "selector": "0xe21493c1",
+      "pageGas": "700000",
+      "hash": "0xc1d5cfce334edb7e927b83c26a9f19fe7ecde31e1353dfb4a31b62b0608d1a3b"
+    },
+    {
+      "who": "alice",
+      "to": "0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd",
+      "selector": "0x4e71d92d",
+      "pageGas": "700000",
+      "hash": "0x3fce76c02d87ec4873f2998a06f2fbb9e6d70a75df090983f4a9987f310e0f24"
+    }
+  ],
+  "untested": [],
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ],
+  "crashed": "locator.click: Timeout 60000ms exceeded."
+}

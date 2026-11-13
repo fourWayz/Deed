@@ -1,0 +1,44 @@
+{
+  "base": "http://localhost:3111",
+  "indexer": "https://deed-lovat.vercel.app",
+  "position": "5",
+  "results": [
+    {
+      "name": "surplus: the position was closed by a redemption and the lens reports surplus for its holder",
+      "ok": true,
+      "detail": "status 4, surplus 0.008033421674863995 BTC, holder bob"
+    },
+    {
+      "name": "surplus: page offers 'Claim X BTC' with the lens amount, not 'Nothing to claim'",
+      "ok": true,
+      "detail": "Claim 0.00803 BTC"
+    },
+    {
+      "name": "surplus: claim from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "chain: surplus is now zero and the wallet received it (less gas)",
+      "ok": true,
+      "detail": "+0.008033 BTC of 0.008033"
+    },
+    {
+      "name": "surplus: after the claim the page says nothing to claim and the button is disabled",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [
+    {
+      "who": "bob",
+      "to": "0x37E88A5D7397719e643e7927fCE25eA3E0DB1395",
+      "selector": "0x27ff02e3",
+      "pageGas": "700000",
+      "hash": "0x8317e853b7166aee98f97eddef6e9dc6948467939198526082c5ce7afb5e4c79"
+    }
+  ],
+  "untested": [],
+  "consoleErrors": [],
+  "failed": 0
+}
