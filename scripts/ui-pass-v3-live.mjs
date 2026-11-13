@@ -4,8 +4,10 @@
 // from the environment and never printed or sent to the page. Results go to docs/ui-pass-v3.json.
 //
 // One new position goes through its whole life, every step clicked in the UI: open (wizard), borrow, refinance, list,
-// buy, rescue start, bid, close, claims. Env: PHASE_FROM=n resumes at phase n, POS=<tokenId> names the position when resuming.
+// buy, rescue start, bid, close, claims. Results and every tx hash are written after each step, so a crash loses nothing.
+// Env: PHASE_FROM=n resumes at phase n, POS=<tokenId> names the position when resuming.
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright-core";
 import {
   createPublicClient, createWalletClient, decodeFunctionData, decodeFunctionResult, encodeFunctionResult,
@@ -15,7 +17,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 const dep = JSON.parse(fs.readFileSync(new URL("../deployments.json", import.meta.url)));
 const BASE = process.env.UI_BASE ?? "http://localhost:3111";
-const INDEXER = process.env.UI_INDEXER ?? "http://localhost:8787";
+const INDEXER = process.env.UI_INDEXER ?? "https://deed-lovat.vercel.app";
 const SHOTS = process.env.SHOT_DIR ?? "./shots";
 const FROM = Number(process.env.PHASE_FROM ?? 0);
 fs.mkdirSync(SHOTS, { recursive: true });
@@ -36,9 +38,13 @@ const results = [];
 const txs = [];
 const untested = [];
 const consoleErrors = [];
+let positionId = null;
+const OUT = new URL(process.env.OUT ?? "../docs/ui-pass-v3-rc.json", import.meta.url);
+const save = (extra = {}) => fs.writeFileSync(OUT, JSON.stringify({ base: BASE, indexer: INDEXER, position: positionId, results, txs, untested, consoleErrors: [...new Set(consoleErrors)].slice(0, 25), ...extra }, null, 2));
 const step = (name, ok, detail = "") => {
   results.push({ name, ok, detail });
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  -  " + detail : ""}`);
+  save();
 };
 const approved = { alice: false, bob: false, empty: false };
 
@@ -57,6 +63,8 @@ async function handle(who, method, params) {
       const gas = t.gas ? BigInt(t.gas) : ((await pub.estimateGas({ account: a, to: t.to, data: t.data, value })) * 13n) / 10n;
       const hash = await clients[who].sendTransaction({ to: t.to, data: t.data, value, gas });
       txs.push({ who, to: t.to, selector: (t.data ?? "0x").slice(0, 10), pageGas: t.gas ? BigInt(t.gas).toString() : null, hash });
+      console.log(`  tx ${who} ${(t.data ?? "0x").slice(0, 10)} -> ${t.to} ${hash}`);
+      save();
       return hash;
     }
     case "personal_sign": return clients[who].signMessage({ message: { raw: params[0] } });
@@ -237,6 +245,7 @@ async function main() {
   const phone = await session("empty", { width: 390, height: 844 });
   const startNext = await pub.readContract({ address: dep.deedNFT, abi: nftAbi, functionName: "nextId" });
   let N = process.env.POS ? BigInt(process.env.POS) : startNext;
+  if (process.env.POS) positionId = String(N);
   let r;
 
   // ---------- phase 0: routes, landing, activity, error and fallback states ----------
@@ -270,8 +279,10 @@ async function main() {
     await empty.getByText("Positions opened").first().waitFor({ timeout: 120000 });
     const land = await text(empty);
     step("landing fee text shows the on-chain rates and the treasury", /0\.50% of the sale price on a fixed price sale and 0\.50% on a rescue auction/.test(land) && land.includes(dep.treasury.slice(0, 6)), (land.match(/Deed's fee:[^\n]*/) ?? [""])[0].slice(0, 110));
+    step("landing labels the stats as the team's test wallets", /Testnet activity from the team's test wallets\./.test(land), (land.match(/Testnet activity[^\n]*/) ?? ["missing"])[0]);
     step("landing labels the earlier deployment", /Earlier deployment \(v2\): 3 positions/.test(land), (land.match(/Earlier deployment[^\n]*/) ?? ["none"])[0]);
-    step("landing says the indexer has not indexed v3 yet (it follows v2 only)", /has not indexed this deployment yet/.test(land));
+    step("landing takes its totals from the indexer, no fallback notice", /Totals come from the Deed indexer/.test(land) && !/did not answer/.test(land) && !/Counted from this deployment/.test(land));
+    step("landing shows when the indexer last synced", /Last synced .+ ago/.test(land), (land.match(/Last synced[^\n]*/) ?? ["missing"])[0]);
     await shot(empty, "landing-stats");
   }
 
@@ -302,6 +313,7 @@ async function main() {
     step("open a position from the wizard (0.04 BTC, 1800 MUSD)", r.verdict === "ok", r.text);
     const after = await pub.readContract({ address: dep.deedNFT, abi: nftAbi, functionName: "nextId" });
     N = after - 1n;
+    positionId = String(N);
     step("new Deed minted to the opener", after > startNext && lc(await pub.readContract({ address: dep.deedNFT, abi: nftAbi, functionName: "ownerOf", args: [N] })) === lc(wallets.alice.address), `Deed #${N}`);
 
     // the wizard moves on to step 3 by itself
@@ -355,7 +367,7 @@ async function main() {
     r = await tx(alice, "List for sale");
     step("list from the wizard with the untouched default ICR", r.verdict === "ok", r.text);
     const listedShown = await alice.getByText(/is listed/).first().waitFor({ timeout: 60000 }).then(() => true, () => false);
-    step("wizard step 3 shows listed", listedShown);
+    step("wizard step 3 shows listed", listedShown, listedShown ? "" : (await text(alice)).replace(/\s+/g, " ").slice(0, 300));
 
     const treasuryBefore = await claimable(dep.market, dep.treasury);
     const aliceClaimBefore = await claimable(dep.market, wallets.alice.address);
@@ -364,7 +376,7 @@ async function main() {
     await bob.getByText(`Deed #${N}`, { exact: true }).first().waitFor({ timeout: 90000 });
     await settle(bob, 2500);
     const mk = await text(bob);
-    step("market card shows the buyer's fee line and the equity comparison", /You pay 50\.00 MUSD\. 0\.25 MUSD of it is the protocol fee/.test(mk) && /equity vs price/i.test(mk), (mk.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 100));
+    step("market card shows the buyer's fee line and the equity comparison", /You pay 50\.00 MUSD\. 0\.25 MUSD of it is the protocol fee/.test(mk) && /equity vs price/i.test(mk), (mk.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 100) + (/equity vs price/i.test(mk) ? "" : " | no equity label in: " + mk.replace(/\s+/g, " ").slice(0, 200)));
     await shot(bob, "market-listing");
     r = await tx(bob, "Buy for 50.00 MUSD");
     step("buy the listing from the UI (approve then buy)", okOrGone(r), r.text);
@@ -444,7 +456,7 @@ async function main() {
     const card = await text(alice);
     const treasuryBefore = await claimable(dep.auction, dep.treasury);
     const bobBefore = await claimable(dep.auction, wallets.bob.address);
-    step("auction card shows floor, time left, the winner's target ICR and the bid fee line", /floor/i.test(card) && /time left/i.test(card) && /winner leaves icr/i.test(card) && /protocol fee/.test(card), (card.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 110));
+    step("auction card shows floor, time left, the winner's target ICR and the bid fee line", /floor/i.test(card) && /time left/i.test(card) && /winner leaves icr/i.test(card) && /protocol fee/.test(card), (card.match(/You pay[^\n]*/) ?? [""])[0].slice(0, 110) + (/floor/i.test(card) && /time left/i.test(card) && /winner leaves icr/i.test(card) ? "" : " | card text: " + card.replace(/\s+/g, " ").slice(0, 300)));
     await shot(alice, "rescue-live");
     const oldOwnerMusd = await musdOf(wallets.alice.address);
     r = await tx(alice, "Bid at current price");
@@ -529,45 +541,80 @@ async function main() {
     await bob.goto(BASE + "/position/3", { waitUntil: "domcontentloaded" });
   }
 
-  // ---------- phase 9: stats, earlier deployment, indexer fallback ----------
+  // ---------- phase 9: stats from the indexer against scripts/chain-scan.mjs, then the fallback ----------
   if (FROM <= 9) {
-    const truth = await chainTotals(BigInt(dep.deployBlock), dep);
-    const earlier = await chainTotals(16339552n, dep.previousDeployments.v2, true);
-    for (const [label, pg, apiUp] of [["indexer up (follows v2 only)", empty, true], ["indexer down", await session("empty"), false]]) {
-      if (!apiUp) await pg.route(`${INDEXER}/**`, (route) => route.abort());
-      await pg.goto(BASE + "/", { waitUntil: "domcontentloaded" });
-      await pg.getByText("Positions opened").first().waitFor({ timeout: 150000 });
-      await settle(pg, 1500);
-      const ui = await statsOf(pg);
-      const landing = await text(pg);
-      step(`stats, ${label}: current deployment counted from chain and matches an independent scan`,
-        num(ui["Positions opened"]) === truth.positions && num(ui["Unique wallets"]) === truth.wallets && near(num(ui["Volume"]), e18(truth.volume), 0.01) && near(num(ui["Fees paid"]), e18(truth.fees), 0.01),
-        `ui ${ui["Positions opened"]} pos / ${ui["Unique wallets"]} wallets / ${ui["Volume"]} / fees ${ui["Fees paid"]}; chain ${truth.positions} / ${truth.wallets} / ${e18(truth.volume).toFixed(2)} / ${e18(truth.fees).toFixed(4)}`);
-      if (apiUp) step("stats, indexer up: earlier deployment is labelled and its numbers match an independent v2 scan", new RegExp(`Earlier deployment \\(v2\\): ${earlier.positions} positions, ${e18(earlier.volume).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MUSD volume`).test(landing), (landing.match(/Earlier deployment[^\n]*/) ?? ["missing"])[0]);
-      else step("stats, indexer down: page says the indexer did not answer, no earlier line, no error box", /indexer did not answer/.test(landing) && !/Earlier deployment/.test(landing) && (await pg.locator(".notice.err").count()) === 0);
+    // the independent scan (raw getLogs, hand-sliced words, no shared code with the indexer or the app)
+    const scan = () => JSON.parse(execFileSync("node", ["scripts/chain-scan.mjs"], { cwd: new URL("../indexer", import.meta.url).pathname, env: process.env, encoding: "utf8", maxBuffer: 1 << 20 }));
+    const api = async () => (await fetch(`${INDEXER}/stats`)).json();
+    // the indexer syncs on a cron, give it time to catch up with this run's last transaction
+    const lastBlock = Number(await pub.getBlockNumber());
+    let truth, st, waited = 0;
+    for (;;) {
+      truth = scan();
+      st = await api();
+      const caught = st.indexed_to.every((x) => x.block >= truth.scanned_to);
+      if ((caught && st.positions === truth.positions) || waited > 25 * 60) break;
+      console.log(`  waiting for the indexer: it is at ${st.indexed_to.map((x) => `${x.version}@${x.block}`).join(", ")}, chain scan to ${truth.scanned_to} (${waited}s)`);
+      await new Promise((r) => setTimeout(r, 30000));
+      waited += 30;
     }
-    await empty.goto(BASE + "/activity", { waitUntil: "domcontentloaded" });
-    await empty.getByText("Recent transactions").waitFor({ timeout: 150000 });
-    await settle(empty, 1500);
-    const rows = await empty.locator(".feed .feed-row").allInnerTexts();
-    const links = await empty.locator(".feed a").evaluateAll((as) => as.map((a) => a.href));
-    step("activity lists recent v3 transactions with explorer links, newest first", links.length > 0 && links.every((h) => /explorer\.test\.mezo\.org\/tx\/0x[0-9a-f]{64}/.test(h)), `${links.length} rows`);
+    const same = (a, b) => ["positions", "listings", "sales", "auctions_started", "rescues", "unique_wallets", "volume_musd_wei", "fees_musd_wei"].every((k) => String(a[k]) === String(b[k]));
+    step("indexer /stats equals scripts/chain-scan.mjs on every field", same(st, truth), JSON.stringify({ api: [st.positions, st.listings, st.sales, st.auctions_started, st.rescues, st.unique_wallets, st.volume_musd_wei, st.fees_musd_wei], scan: [truth.positions, truth.listings, truth.sales, truth.auctions_started, truth.rescues, truth.unique_wallets, truth.volume_musd_wei, truth.fees_musd_wei], waitedSeconds: waited, lastBlockOfRun: lastBlock }));
+
+    const fresh = await session("empty");
+    await fresh.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+    await fresh.getByText("Positions opened").first().waitFor({ timeout: 150000 });
+    await settle(fresh, 1500);
+    const ui = await statsOf(fresh);
+    const landing = await text(fresh);
+    const money = (w) => e18(BigInt(w));
+    step("landing totals equal chain-scan (positions, volume, fees, wallets)", num(ui["Positions opened"]) === truth.positions && num(ui["Unique wallets"]) === truth.unique_wallets && near(num(ui["Volume"]), money(truth.volume_musd_wei), 0.01) && near(num(ui["Fees paid"]), money(truth.fees_musd_wei), 0.01),
+      `ui ${ui["Positions opened"]} pos / ${ui["Unique wallets"]} wallets / ${ui["Volume"]} / fees ${ui["Fees paid"]}; scan ${truth.positions} / ${truth.unique_wallets} / ${money(truth.volume_musd_wei).toFixed(2)} / ${money(truth.fees_musd_wei).toFixed(4)}`);
+    step("landing: indexer source, team-wallets label, last synced", /Totals come from the Deed indexer/.test(landing) && /Testnet activity from the team's test wallets\./.test(landing) && /Last synced .+ ago/.test(landing), (landing.match(/Last synced[^\n]*/) ?? ["missing"])[0]);
+    const earlier = await chainTotals(16339552n, dep.previousDeployments.v2, true);
+    step("landing: earlier deployment line matches an independent v2 scan", new RegExp(`Earlier deployment \\(v2\\): ${earlier.positions} positions, ${e18(earlier.volume).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MUSD volume`).test(landing), (landing.match(/Earlier deployment[^\n]*/) ?? ["missing"])[0]);
+
+    await fresh.goto(BASE + "/activity", { waitUntil: "domcontentloaded" });
+    await fresh.getByText("Recent transactions").waitFor({ timeout: 150000 });
+    await settle(fresh, 1500);
+    const act = await statsOf(fresh);
+    const atext = await text(fresh);
+    step("activity totals equal chain-scan (positions, volume, fees, wallets, sales, rescues)", num(act["Positions opened"]) === truth.positions && num(act["Unique wallets"]) === truth.unique_wallets && num(act["Fixed price sales"]) === truth.sales && num(act["Rescues won"]) === truth.rescues && near(num(act["Volume"]), money(truth.volume_musd_wei), 0.01) && near(num(act["Fees paid"]), money(truth.fees_musd_wei), 0.01), JSON.stringify(act));
+    const synced = (atext.match(/Last synced ([^\n.]*)/) ?? [])[1];
+    const stamp = await fresh.locator('[data-testid="last-synced"]').getAttribute("title");
+    step("activity shows last synced from lastSyncedAt", !!synced && stamp === st.lastSyncedAt || (!!synced && Math.abs(new Date(stamp).getTime() - new Date((await api()).lastSyncedAt).getTime()) < 15 * 60 * 1000), `${synced} (${stamp})`);
+    step("activity carries the team-wallets label", /Testnet activity from the team's test wallets\./.test(atext));
+    const rows = await fresh.locator(".feed .feed-row").allInnerTexts();
+    const links = await fresh.locator(".feed a").evaluateAll((as) => as.map((a) => a.href));
+    step("activity lists recent transactions with explorer links", links.length > 0 && links.every((h) => /explorer\.test\.mezo\.org\/tx\/0x[0-9a-f]{64}/.test(h)), `${links.length} rows`);
     step("activity shows this run's sale and rescue with their amounts", rows.some((x) => /Sold at a fixed price/.test(x) && /50\.00 MUSD/.test(x)) && rows.some((x) => /Rescue auction won/.test(x)), "");
-    await shot(empty, "activity");
-    untested.push("Stats from an indexer that follows v3: the indexer is not wired to v3 yet, so only the 'indexer behind' path (v2 history from the API, v3 from chain) and the 'indexer down' path were exercised. The code path for an indexer that has v3 was not run against real data.");
+    await shot(fresh, "activity");
+
+    // indexer down: the app counts this deployment's events itself and says so
+    const down = await session("empty");
+    await down.route(`${INDEXER}/**`, (route) => route.abort());
+    await down.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+    await down.getByText("Positions opened").first().waitFor({ timeout: 150000 });
+    await settle(down, 1500);
+    const dui = await statsOf(down);
+    const dtext = await text(down);
+    const v3 = await chainTotals(BigInt(dep.deployBlock), dep);
+    step("indexer down: current deployment counted from chain, matches an independent scan", num(dui["Positions opened"]) === v3.positions && num(dui["Unique wallets"]) === v3.wallets && near(num(dui["Volume"]), e18(v3.volume), 0.01) && near(num(dui["Fees paid"]), e18(v3.fees), 0.01), `ui ${dui["Positions opened"]} / ${dui["Unique wallets"]} / ${dui["Volume"]} / ${dui["Fees paid"]}; chain ${v3.positions} / ${v3.wallets} / ${e18(v3.volume).toFixed(2)} / ${e18(v3.fees).toFixed(4)}`);
+    step("indexer down: page says the indexer did not answer, keeps the team label, no last synced, no error box", /indexer did not answer/.test(dtext) && /Testnet activity from the team's test wallets\./.test(dtext) && !/Last synced/.test(dtext) && !/Earlier deployment/.test(dtext) && (await down.locator(".notice.err").count()) === 0);
+    await shot(down, "landing-indexer-down");
+    untested.push("The 'team wallets' label going away: no wallet outside the team has used the contracts yet, so the branch that drops the label only has a unit test (lib/team.test.ts), not a browser run.");
   }
 
   await browser.close();
   const failed = results.filter((x) => !x.ok).length;
   console.log(`\n${results.length - failed}/${results.length} passed, ${failed} failed`);
   console.log(`${txs.length} transactions sent`);
-  const safeConsole = [...new Set(consoleErrors)].slice(0, 25);
-  fs.writeFileSync(new URL("../docs/ui-pass-v3.json", import.meta.url), JSON.stringify({ base: BASE, position: String(N), results, txs, untested, consoleErrors: safeConsole }, null, 2));
-  if (safeConsole.length) console.log("console errors:\n" + safeConsole.join("\n"));
+  save({ failed });
+  if (consoleErrors.length) console.log("console errors:\n" + [...new Set(consoleErrors)].slice(0, 25).join("\n"));
 }
 main().catch(async (e) => {
   console.error("pass crashed:", e.message.split("\n")[0]);
-  fs.writeFileSync(new URL("../docs/ui-pass-v3.json", import.meta.url), JSON.stringify({ base: BASE, results, txs, untested, consoleErrors: [...new Set(consoleErrors)].slice(0, 25), crashed: e.message.split("\n")[0] }, null, 2));
+  save({ crashed: e.message.split("\n")[0] });
   await browser?.close();
   process.exit(1);
 });
