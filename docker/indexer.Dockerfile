@@ -1,5 +1,5 @@
 # Build from the repo root so the root deployments.json (v3 addresses and deploy block) is in the image:
-#   docker build -f indexer/Dockerfile -t deed-indexer .
+#   docker build -f docker/indexer.Dockerfile -t deed-indexer .
 FROM node:22-slim
 WORKDIR /app/indexer
 COPY indexer/package.json indexer/package-lock.json ./
