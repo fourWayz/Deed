@@ -179,6 +179,12 @@ export function StatsSource({ s, indexerDown }: { s: import("@/lib/stats").Stats
               .
             </>
           )}
+          {/* a stalled sync makes every total too low, so say it instead of leaving the age to be noticed */}
+          {s.lastSyncedAt && Date.now() - new Date(s.lastSyncedAt).getTime() > 30 * 60_000 && (
+            <div data-testid="indexer-behind" style={{ marginTop: 4, color: "var(--warn, #b45309)" }}>
+              The indexer is behind, so the newest activity is not in these totals yet.
+            </div>
+          )}
         </div>
       ) : (
         <div>
