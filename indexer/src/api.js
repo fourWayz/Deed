@@ -134,6 +134,12 @@ export function routes(db) {
       return { limit, items: rows.map(fixEvent) }
     },
 
+    // when a sync pass last finished (it touches the cursor even when nothing new was found)
+    async lastSyncedAt() {
+      const v = (await db.query('select max(updated_at) as t from sync_state')).rows[0].t
+      return v ? new Date(v).toISOString() : null
+    },
+
     async stats() {
       const one = async (sql, p = []) => (await db.query(sql, p)).rows[0]
       const agg = await one(`
@@ -168,6 +174,7 @@ export function routes(db) {
         volume_musd_wei: str(agg.volume),
         fees_musd_wei: str(agg.fees),
         by_version: perVersion.map((r) => ({ version: r.version, positions: Number(r.positions), volume_musd_wei: str(r.volume), fees_musd_wei: str(r.fees) })),
+        lastSyncedAt: sync.length ? new Date(Math.max(...sync.map((r) => new Date(r.updated_at).getTime()))).toISOString() : null,
         indexed_to: sync.map((r) => ({ version: r.version, block: Number(r.block), updated_at: r.updated_at })),
       }
     },
@@ -218,16 +225,19 @@ const CORS = {
   'access-control-max-age': '86400',
 }
 
-export function handler(db, { perMinute = 120 } = {}) {
+// perMinute: 0 turns the in-memory limiter off (serverless: the CDN cache absorbs load instead).
+// cacheControl: header for 200 responses.
+export function handler(db, { perMinute = 120, cacheControl = 'public, max-age=3' } = {}) {
   const r = routes(db)
-  const limited = rateLimiter({ perMinute })
+  const limited = perMinute > 0 ? rateLimiter({ perMinute }) : () => 0
   return async (req, res) => {
     const send = (status, body, extra = {}) => {
+      const { noCache, ...more } = extra
       res.writeHead(status, {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
-        'cache-control': status === 200 ? 'public, max-age=3' : 'no-store',
-        ...extra,
+        'cache-control': status === 200 && !noCache ? cacheControl : 'no-store',
+        ...more,
       })
       res.end(JSON.stringify(body))
     }
@@ -244,7 +254,14 @@ export function handler(db, { perMinute = 120 } = {}) {
       const url = new URL(req.url, 'http://x')
       const q = Object.fromEntries(url.searchParams)
       const parts = url.pathname.replace(/\/+$/, '').split('/').filter(Boolean)
-      if (parts.length === 0 || parts[0] === 'health') return send(200, { ok: true })
+      if (parts.length === 0 || parts[0] === 'health') {
+        try {
+          return send(200, { ok: true, lastSyncedAt: await r.lastSyncedAt() }, { noCache: true })
+        } catch (e) {
+          console.error(e)
+          return send(503, { ok: false, error: 'database unreachable' })
+        }
+      }
       if (parts[0] === 'positions' && parts.length === 1) return send(200, await r.positions(q))
       if (parts[0] === 'positions' && parts.length === 2) return send(200, await r.position(parts[1]))
       if (parts[0] === 'listings' && parts.length === 1) return send(200, await r.listings(q))

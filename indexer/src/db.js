@@ -3,11 +3,13 @@ import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { root } from './config.js'
 
-export async function connect(url) {
+export async function connect(url, { max = 5, idleMs = 10_000 } = {}) {
   const { default: pg } = await import('pg')
   const pool = new pg.Pool({
     connectionString: url,
-    max: 5,
+    max,
+    idleTimeoutMillis: idleMs,
+    allowExitOnIdle: true,
     // Supabase needs TLS; local postgres usually does not
     ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false },
   })
@@ -44,10 +46,15 @@ export async function memoryDb() {
 // runs sql/*.sql in order. Files are idempotent (create ... if not exists / create or replace).
 export async function migrate(db) {
   const dir = path.join(root, 'sql')
+  // remember which files ran, so a cron run that finds nothing new does not redo the schema every time
+  await db.query('create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())')
+  const done = new Set((await db.query('select name from schema_migrations')).rows.map((r) => r.name))
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.sql')).sort()) {
+    if (done.has(f)) continue
     const sql = readFileSync(path.join(dir, f), 'utf8')
     // pglite's query() takes one statement, pg takes several; split on blank-line separated statements
     for (const stmt of splitSql(sql)) await db.query(stmt)
+    await db.query('insert into schema_migrations (name) values ($1) on conflict do nothing', [f])
   }
 }
 

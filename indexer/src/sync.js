@@ -1,5 +1,5 @@
 import { makeDecoder } from './decode.js'
-import { applyBatch, getCursor, rollback, recentBlocks, vaultAddresses } from './store.js'
+import { applyBatch, getCursor, rollback, recentBlocks, vaultAddresses, touchCursor } from './store.js'
 import { CHAIN_ID } from './config.js'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -99,6 +99,7 @@ export async function syncSource(ctx, src) {
         log(`${src.version}: blocks ${next}-${to}, ${r.events} events`)
         next = to + 1
       }
+      await touchCursor(ctx.db, src.version)
       return total
     } catch (e) {
       if (!(e instanceof MidBatchReorg)) throw e
@@ -109,17 +110,31 @@ export async function syncSource(ctx, src) {
   throw new Error(`${src.version}: gave up after repeated reorgs`)
 }
 
-export async function runForever(ctx, sources, { once = false } = {}) {
+// one pass over every deployment, for cron. Every deployment is tried even if an earlier one fails, and any
+// failure is thrown at the end so the process exits non-zero.
+export async function runOnce(ctx, sources) {
+  if (!sources.length) throw new Error('no deployment is configured to sync')
+  const errors = []
+  for (const src of sources) {
+    try {
+      await syncSource(ctx, src)
+    } catch (e) {
+      ctx.log(`${src.version}: sync error: ${e.message}`)
+      errors.push(`${src.version}: ${e.message}`)
+    }
+  }
+  if (errors.length) throw new Error(errors.join('; '))
+}
+
+export async function runForever(ctx, sources) {
   for (;;) {
     for (const src of sources) {
       try {
         await syncSource(ctx, src)
       } catch (e) {
         ctx.log(`${src.version}: sync error: ${e.message}`)
-        if (once) throw e
       }
     }
-    if (once) return
     await sleep(ctx.pollMs)
   }
 }

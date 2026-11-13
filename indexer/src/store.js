@@ -68,3 +68,8 @@ export async function vaultAddresses(db, version) {
   )
   return r.rows.map((x) => x.vault)
 }
+
+// a pass that found nothing new still counts as a sync: move updated_at so clients can see the indexer is alive
+export async function touchCursor(db, version) {
+  await db.query('update sync_state set updated_at = now() where version = $1', [version])
+}
