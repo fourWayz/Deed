@@ -116,7 +116,7 @@ select
   own.owner                              as owner,
   (c.args->>'collateral')::numeric
     + coalesce(v.added, 0) - coalesce(v.withdrawn, 0)                    as collateral,
-  (c.args->>'debt')::numeric - coalesce(v.repaid, 0)                     as debt_principal,
+  (c.args->>'debt')::numeric + coalesce(v.borrowed, 0) - coalesce(v.repaid, 0) as debt_principal,
   (c.args->>'collateral')::numeric                                       as opened_collateral,
   (c.args->>'debt')::numeric                                             as opened_debt,
   v.closed,
@@ -138,6 +138,7 @@ left join lateral (
     sum((e.args->>'amount')::numeric) filter (where e.name = 'CollateralAdded') as added,
     sum((e.args->>'amount')::numeric) filter (where e.name = 'Withdrawn')       as withdrawn,
     sum((e.args->>'amount')::numeric) filter (where e.name = 'Repaid')          as repaid,
+    sum((e.args->>'amount')::numeric) filter (where e.name = 'Borrowed')        as borrowed,
     bool_or(e.name = 'Closed')                                                  as closed
   from events e
   where e.contract = 'PositionVault' and e.address = (c.args->>'vault') and e.version = c.version

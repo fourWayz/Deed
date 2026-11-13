@@ -40,10 +40,10 @@ if (cmd === 'migrate') {
   await runForever(ctx, activeSources(), { once })
   if (once) await db.close()
 } else if (cmd === 'serve') {
-  startApi(db, e.port, log)
+  startApi(db, e.port, log, { perMinute: e.rateLimitPerMin })
 } else if (cmd === 'run') {
   // one process: the API plus the sync loop
-  startApi(db, e.port, log)
+  startApi(db, e.port, log, { perMinute: e.rateLimitPerMin })
   const ctx = { db, client: rpcClient(e.rpc), log, ...e }
   runForever(ctx, activeSources()).catch((err) => {
     log(`fatal: ${err.message}`)

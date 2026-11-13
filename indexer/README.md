@@ -6,15 +6,14 @@ computed from those rows.
 
 ## What it indexes
 
-| Deployment | Status | Source |
+| Deployment | Source of addresses and start block | ABIs |
 | --- | --- | --- |
-| `v2` | the deployment in the repo-root `deployments.json`, indexed from its first deploy block `16339552` | `abis/v2/*.json` |
-| `v3` | **not wired yet**. Needs the deployed addresses, a start block and `abis/v3/*.json` from the contracts session | `config/deployments.json` |
+| `v2` | `config/deployments.json`, from first deploy block `16339552` | `abis/v2/` (event-only, written from the source) |
+| `v3` | the repo-root `deployments.json` (`deployBlock`, `deedNFT`, `factory`, `market`, `auction`) | `abis/v3/`, copies of the compiled root `abis/` |
 
-While `v3` has no address, start block or ABI the indexer prints `v3: skipped (...)` and carries on with `v2`. To add
-it: put `DeedNFT.json`, `DeedFactory.json`, `DeedMarket.json`, `RescueAuction.json` (and `PositionVault.json`) in
-`abis/v3/`, fill the addresses and `startBlock` in `config/deployments.json`, and restart. Each deployment has its own
-cursor, so v3 backfills without touching v2.
+Each deployment has its own cursor. Contracts that emit nothing the API needs (`PairTwapPrice`, `DeedLens`) are not indexed.
+Fees: v3 `Sold.fee` and `Won.fee` are the treasury share of the gross `price`, so `fees_musd_wei` sums them and
+`volume_musd_wei` sums the gross prices. v2 has no fee.
 
 Per deployment it follows `DeedNFT`, `DeedFactory`, `DeedMarket`, `RescueAuction`, and also every `PositionVault` that
 `PositionCreated` announces (the vault events are how collateral and debt move).
@@ -61,7 +60,11 @@ Other modes: `npm run once` (catch up to the head and exit, for a cron job), `np
    calls (rows stay correct, because inserts are idempotent).
 3. **Or a scheduled job** (cron, GitHub Actions, Railway cron): run `npm run once` every minute or so, and run
    `npm run serve` as the API.
-4. First sync of v2 reads about 400k blocks in 9000-block batches. Expect a few minutes.
+4. **Rate limit and CORS.** Any origin may `GET` (and `OPTIONS` preflight). Each client gets `RATE_LIMIT_PER_MIN` (default 120)
+   requests a minute, then `429` with `Retry-After`. `/health` is exempt. The client is `fly-client-ip` when present (Fly
+   sets it), otherwise the socket address; `x-forwarded-for` is ignored because a client can forge it. The counter is in
+   memory, so it is per process and resets on restart.
+5. First sync of v2 reads about 400k blocks in 9000-block batches. Expect a few minutes.
 
 Environment: `DATABASE_URL` (required), `MEZO_TESTNET_RPC`, `PORT` (8787), `BATCH_BLOCKS` (9000, max 10000),
 `POLL_MS` (4000), `CONFIRMATIONS` (1). Secrets stay in `.env`, which is git-ignored.
@@ -141,3 +144,34 @@ The sync tests use a fake chain, so they show the logic, not the behaviour of Me
 `node scripts/live-smoke.mjs` syncs the real v2 deployment from Mezo testnet into an in-process Postgres and prints the
 stats. On 2026-11-12 it indexed 3 positions, 6 listings, 2 sales, 3 auctions and 2 rescues in about 3 minutes, and the owners
 of tokens 1 to 3 matched `DeedNFT.ownerOf` on chain. It was not run against a real Supabase database.
+
+## Independent check
+
+`node scripts/chain-scan.mjs` recomputes the stats without the indexer's ABIs, decoder or SQL: it hashes event signatures,
+reads raw logs and slices the data words by hand. On 2026-11-12 (blocks to 16740688) it matched the indexer exactly on
+positions (6), listings (11), sales (3), auctions started (4), rescues (3), unique wallets (2), volume
+(`2527240285832979884033`) and fees (`3190112384145783899`). Sync time from empty: v2 about 280 s, v3 about 7 s.
+
+## Hosting files
+
+`Dockerfile` (build from the repo root: `docker build -f indexer/Dockerfile -t deed-indexer .`) and `fly.toml` (one
+always-on machine, `/health` check). Untested: Docker is not usable in the dev environment.
+
+## Supabase notes (tested 2026-11-13)
+
+- **TLS.** The connection uses TLS with certificate verification **off** (`rejectUnauthorized: false` in `src/db.js`).
+  With verification on, Supabase's pooler fails with `SELF_SIGNED_CERT_IN_CHAIN` because its chain is not in Node's trust
+  store. Traffic is still encrypted, but the server's identity is not checked. To verify, download the project's CA
+  certificate from the Supabase dashboard and pass it as the `ca` option.
+- **Port.** The session pooler URI uses port 5432. From the dev machine that port accepted TCP but never answered the
+  Postgres handshake (no reply to an SSLRequest in 10 s), while the transaction pooler on 6543 on the same host answered at
+  once. All local Supabase tests used 6543, with the port swapped in memory only. The code works on either mode: every
+  write is one explicit transaction on one checked-out connection, and no named prepared statements are used. If 5432 times
+  out from your host, use 6543.
+- **Results.** Migration took about 8 s, and the full sync of v2 and v3 from empty took about 6m50s (round trips to the remote
+  database dominate). Every route answered over HTTP, and `/stats` matched `scripts/chain-scan.mjs` on all eight fields
+  (7 positions, 12 listings, 4 sales, 5 auctions started, 4 rescues, 2 wallets, volume `3126730579642058144555`, fees
+  `6187563853191175201`).
+- **Restart.** After a SIGKILL of the running process, the next run started one block after the stored cursor. Rewinding the
+  v3 cursor and replaying 54 stored events left the table at 139 events, 76 wallet rows and 0 duplicate keys.
+- Every start runs the idempotent migration, which adds about 8 s before the API listens.
