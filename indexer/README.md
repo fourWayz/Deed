@@ -95,8 +95,9 @@ run at least once before the API returns data.
 ### 4. Optional: one long-running process
 `npm run start` runs the API and the sync loop together with the in-memory rate limit (`RATE_LIMIT_PER_MIN`, default 120
 per client, then `429` with `Retry-After`; `/health` exempt; client is `fly-client-ip` if present, else the socket address,
-and `x-forwarded-for` is ignored because a client can forge it). The `Dockerfile` packages this: build from the repo root with
-`docker build -f indexer/Dockerfile -t deed-indexer .`, run with `docker run -p 8787:8787 -e DATABASE_URL deed-indexer`. It was
+and `x-forwarded-for` is ignored because a client can forge it). The Dockerfile is `docker/indexer.Dockerfile` at the repo root, deliberately **outside** `indexer/`: Vercel auto-builds a
+`Dockerfile` it finds in a project's root directory, which broke the first deploy. Build from the repo root with
+`docker build -f docker/indexer.Dockerfile -t deed-indexer .`, run with `docker run -p 8787:8787 -e DATABASE_URL deed-indexer`. It was
 built and run locally with Docker (image about 441 MB) against Supabase on 2026-11-13: `/health` and `/stats` answered
 from the database and the sync loop resumed one block after the stored cursor. Run only one syncing process per database
 if you use this path next to the GitHub job; extra ones only waste RPC calls, because inserts are idempotent.
