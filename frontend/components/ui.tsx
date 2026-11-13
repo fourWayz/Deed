@@ -152,17 +152,39 @@ export function NotDeployed() {
 }
 
 /** Says where stats came from and labels the earlier deployment's share, used on the landing and activity pages. */
+function ago(iso: string): string {
+  const sec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sec < 90) return "under a minute ago";
+  if (sec < 3600) return `${Math.round(sec / 60)} min ago`;
+  if (sec < 86400) return `${Math.round(sec / 3600)} h ago`;
+  return `${Math.round(sec / 86400)} days ago`;
+}
+
 export function StatsSource({ s, indexerDown }: { s: import("@/lib/stats").Stats; indexerDown: boolean }) {
   return (
     <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+      {/* testnet only, and so far only the team has used it. The wording stays until another wallet shows up. */}
+      <div data-testid="stats-label">
+        {s.outsideWallets ? "Testnet activity." : "Testnet activity from the team's test wallets."}
+      </div>
       {s.source === "indexer" ? (
-        <>Totals come from the Deed indexer, across every deployment it follows.</>
+        <div>
+          Totals come from the Deed indexer, across every deployment it follows.
+          {s.lastSyncedAt && (
+            <>
+              {" "}
+              <span data-testid="last-synced" title={s.lastSyncedAt}>
+                Last synced {ago(s.lastSyncedAt)}
+              </span>
+              .
+            </>
+          )}
+        </div>
       ) : (
-        <>
+        <div>
           Counted from this deployment's chain events, blocks {s.fromBlock.toString()} to {s.toBlock.toString()}.
           {indexerDown && " The indexer did not answer, so earlier deployments are not included."}
-          {s.indexerBehind && " The indexer has not indexed this deployment yet, so only the earlier history below comes from it."}
-        </>
+        </div>
       )}
       {s.earlier.map((e) => (
         <div key={e.version}>

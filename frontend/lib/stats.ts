@@ -1,5 +1,6 @@
 import { decodeEventLog, type Address, type PublicClient } from "viem";
 import { ADDR, START_BLOCK, eventsAbi } from "./config";
+import { hasOutsider } from "./team";
 
 export type Activity = {
   kind: "opened" | "listed" | "sold" | "auction" | "won";
@@ -22,8 +23,10 @@ export type Stats = {
   source: "indexer" | "chain";
   // history of earlier deployments, only the indexer has it
   earlier: Earlier[];
-  // the indexer answered but has not indexed this deployment yet, so the current numbers were counted from chain
-  indexerBehind?: boolean;
+  // when the indexer last finished a sync pass (ISO time), only the indexer reports it
+  lastSyncedAt?: string | null;
+  // true once a wallet that is not on the team list has taken part, then the "team test wallets" label goes away
+  outsideWallets: boolean;
   positions: number;
   volume: bigint;
   fees: bigint;
@@ -89,7 +92,7 @@ export async function scanActivity(client: PublicClient, onProgress?: (done: num
       fees += a.fee;
     }
   }
-  return { source: "chain", earlier: [], positions, volume, fees, wallets: wallets.size, sales, rescues, recent: out.slice(0, 12), fromBlock: from, toBlock: head };
+  return { source: "chain", earlier: [], positions, volume, fees, wallets: wallets.size, outsideWallets: hasOutsider([...wallets]), sales, rescues, recent: out.slice(0, 12), fromBlock: from, toBlock: head };
 }
 
 function toActivity(l: { topics: readonly `0x${string}`[]; data: `0x${string}`; blockNumber: bigint; transactionHash: `0x${string}` }): Activity | null {

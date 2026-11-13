@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import { CURRENT_VERSION, INDEXER_URL } from "./config";
+import { hasOutsider } from "./team";
 import type { Activity, Earlier, Stats } from "./stats";
 
 const TIMEOUT_MS = 6_000;
@@ -23,6 +24,7 @@ type ApiStats = {
   unique_wallets: number;
   volume_musd_wei: string;
   fees_musd_wei: string;
+  lastSyncedAt: string | null;
   by_version: { version: string; positions: number; volume_musd_wei: string; fees_musd_wei: string }[];
 };
 type ApiEvent = {
@@ -53,16 +55,24 @@ const big = (v: unknown): bigint => {
 };
 
 /**
- * Stats and recent activity from the indexer. Throws on anything unexpected (down, slow, wrong shape), the caller then
- * falls back to counting events on chain. Totals cover every deployment the indexer follows, with the earlier ones listed
- * separately so they can be labelled.
+ * Stats and recent activity from the indexer. Throws on anything unexpected (down, slow, wrong shape, or an indexer that
+ * does not follow this deployment), the caller then falls back to counting events on chain. Totals cover every deployment
+ * the indexer follows, with the earlier ones listed separately so they can be labelled.
  */
-export async function fetchIndexerStats(): Promise<Stats & { hasCurrent: boolean }> {
-  const [stats, feed] = await Promise.all([getJson("/stats"), getJson("/activity?limit=100")]);
+export async function fetchIndexerStats(): Promise<Stats> {
+  const [stats, feed, pos] = await Promise.all([getJson("/stats"), getJson("/activity?limit=100"), getJson("/positions?limit=200")]);
   const s = stats as ApiStats;
   const events = (feed as { items?: ApiEvent[] }).items;
   if (typeof s?.positions !== "number" || !Array.isArray(s.by_version) || !Array.isArray(events)) {
     throw new Error("indexer answered with an unexpected shape");
+  }
+  // its totals would silently leave this deployment out, so an indexer that does not follow it counts as unusable
+  if (!s.by_version.some((v) => v.version === CURRENT_VERSION)) throw new Error(`indexer does not follow ${CURRENT_VERSION}`);
+  const seen = new Set<string>();
+  for (const e of events) for (const w of [e.args?.owner, e.args?.seller, e.args?.buyer, e.args?.winner]) if (w) seen.add(w);
+  for (const p of (pos as { items?: { creator?: string; owner?: string }[] }).items ?? []) {
+    if (p.creator) seen.add(p.creator);
+    if (p.owner) seen.add(p.owner);
   }
   const earlier: Earlier[] = s.by_version
     .filter((v) => v.version !== CURRENT_VERSION)
@@ -87,8 +97,8 @@ export async function fetchIndexerStats(): Promise<Stats & { hasCurrent: boolean
   }
   return {
     source: "indexer",
-    // false while the indexer has not been pointed at this deployment, its totals would then leave it out
-    hasCurrent: s.by_version.some((v) => v.version === CURRENT_VERSION),
+    lastSyncedAt: s.lastSyncedAt ?? null,
+    outsideWallets: hasOutsider([...seen]),
     earlier,
     positions: s.positions,
     volume: big(s.volume_musd_wei),

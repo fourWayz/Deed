@@ -28,22 +28,16 @@ export function useStats() {
     retry: 1,
     queryFn: async (): Promise<StatsResult> => {
       let down = false;
-      let earlier: Stats["earlier"] = [];
-      let behind = false;
       if (INDEXER_URL) {
         try {
-          const { hasCurrent, ...fromApi } = await fetchIndexerStats();
-          if (hasCurrent) return { ...fromApi, indexerDown: false };
-          // it follows the earlier deployments but not this one: keep its history, count this deployment from chain
-          earlier = fromApi.earlier;
-          behind = true;
+          return { ...(await fetchIndexerStats()), indexerDown: false };
         } catch {
           down = true;
         }
       }
       setProgress(0);
       const s = await scanActivity(client as PublicClient, (d, t) => setProgress(d / t));
-      return { ...s, earlier, indexerBehind: behind, indexerDown: down };
+      return { ...s, indexerDown: down };
     },
   });
   return { ...query, progress };

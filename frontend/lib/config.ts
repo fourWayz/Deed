@@ -33,6 +33,11 @@ export const START_BLOCK = BigInt(process.env.NEXT_PUBLIC_START_BLOCK ?? "0");
 // name the indexer gives the deployment this app is built for, every other version it reports is an earlier deployment
 export const CURRENT_VERSION = process.env.NEXT_PUBLIC_DEPLOYMENT_VERSION ?? "v3";
 // base url of the indexer api. Empty or unreachable means the activity page counts events from the chain itself.
+// wallets the team tests with, comma separated. Stats are labelled as team test activity until someone else shows up.
+export const TEAM_WALLETS = (process.env.NEXT_PUBLIC_TEAM_WALLETS ?? "")
+  .split(",")
+  .map((a) => a.trim().toLowerCase())
+  .filter(Boolean);
 export const INDEXER_URL = (process.env.NEXT_PUBLIC_INDEXER_URL ?? "").replace(/\/+$/, "");
 
 export const deedAbi = parseAbi([
