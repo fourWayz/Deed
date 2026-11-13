@@ -55,6 +55,7 @@ export function env() {
     port: Number(process.env.PORT || 8787),
     // Mezo's RPC rejects eth_getLogs ranges over 10000 blocks
     batchBlocks: Math.min(Number(process.env.BATCH_BLOCKS || 9000), 10000),
+    rateLimitPerMin: Number(process.env.RATE_LIMIT_PER_MIN || 120),
     pollMs: Number(process.env.POLL_MS || 4000),
     confirmations: Number(process.env.CONFIRMATIONS || 1),
   }

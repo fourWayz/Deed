@@ -190,21 +190,55 @@ function fixEvent(r) {
   return { ...num('token_id', 'volume', 'fee')({ ...r }) }
 }
 
-export function handler(db) {
+// fixed-window counter per client. Fly sets fly-client-ip itself; x-forwarded-for is client controlled, so it is ignored.
+export function rateLimiter({ perMinute = 120, now = () => Date.now() } = {}) {
+  const hits = new Map()
+  const timer = setInterval(() => {
+    const t = now()
+    for (const [k, v] of hits) if (t - v.start >= 60_000) hits.delete(k)
+  }, 60_000)
+  timer.unref?.()
+  return (req) => {
+    const key = req.headers['fly-client-ip'] || req.socket?.remoteAddress || 'unknown'
+    const t = now()
+    let h = hits.get(key)
+    if (!h || t - h.start >= 60_000) {
+      h = { start: t, n: 0 }
+      hits.set(key, h)
+    }
+    h.n++
+    return h.n > perMinute ? Math.max(1, Math.ceil((h.start + 60_000 - t) / 1000)) : 0 // seconds to wait, 0 = ok
+  }
+}
+
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, OPTIONS',
+  'access-control-allow-headers': 'content-type',
+  'access-control-max-age': '86400',
+}
+
+export function handler(db, { perMinute = 120 } = {}) {
   const r = routes(db)
+  const limited = rateLimiter({ perMinute })
   return async (req, res) => {
-    const send = (status, body) => {
+    const send = (status, body, extra = {}) => {
       res.writeHead(status, {
         'content-type': 'application/json',
         'access-control-allow-origin': '*',
-        'cache-control': 'public, max-age=3',
+        'cache-control': status === 200 ? 'public, max-age=3' : 'no-store',
+        ...extra,
       })
       res.end(JSON.stringify(body))
     }
     try {
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET', 'access-control-allow-headers': 'content-type' })
+        res.writeHead(204, CORS)
         return res.end()
+      }
+      if (new URL(req.url, 'http://x').pathname !== '/health') {
+        const wait = limited(req)
+        if (wait) return send(429, { error: 'rate limit exceeded' }, { 'retry-after': String(wait) })
       }
       if (req.method !== 'GET') throw new HttpError(405, 'GET only')
       const url = new URL(req.url, 'http://x')
@@ -226,8 +260,8 @@ export function handler(db) {
   }
 }
 
-export function startApi(db, port, log = console.log) {
-  const server = http.createServer(handler(db))
+export function startApi(db, port, log = console.log, opts = {}) {
+  const server = http.createServer(handler(db, opts))
   server.listen(port, () => log(`api on :${port}`))
   return server
 }
