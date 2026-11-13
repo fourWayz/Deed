@@ -1,0 +1,64 @@
+{
+  "base": "http://localhost:3111",
+  "position": "4",
+  "results": [
+    {
+      "name": "a position closed by a redemption (surplus already claimed) says nothing to claim, button disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a position held by someone else shows the connect-the-holder note, no actions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chain: redeemed position has no surplus left (it was claimed in the earlier run)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "open form blocks an under-collateralised position before sending anything",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stats, indexer up (follows v2 only): current deployment counted from chain and matches an independent scan",
+      "ok": true,
+      "detail": "ui 4 pos / 2 wallets / 1,237.51 MUSD / fees 6.19 MUSD; chain 4 / 2 / 1237.51 / 6.1876"
+    },
+    {
+      "name": "stats, indexer up: earlier deployment is labelled and its numbers match an independent v2 scan",
+      "ok": true,
+      "detail": "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees."
+    },
+    {
+      "name": "stats, indexer down: current deployment counted from chain and matches an independent scan",
+      "ok": true,
+      "detail": "ui 4 pos / 2 wallets / 1,237.51 MUSD / fees 6.19 MUSD; chain 4 / 2 / 1237.51 / 6.1876"
+    },
+    {
+      "name": "stats, indexer down: page says the indexer did not answer, no earlier line, no error box",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "activity lists recent v3 transactions with explorer links, newest first",
+      "ok": true,
+      "detail": "12 rows"
+    },
+    {
+      "name": "activity shows this run's sale and rescue with their amounts",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [],
+  "untested": [
+    "A claim that actually pays out surplus: surplus only exists after a third party's full redemption of a trove, which cannot be caused on demand. The claim path itself was exercised by the contracts session (docs/demo.md, Deed #3 of the v3 run, tx 0x3a672efe…57fa67). The UI shows 'Nothing to claim' for the redeemed and closed positions.",
+    "Stats from an indexer that follows v3: the indexer is not wired to v3 yet, so only the 'indexer behind' path (v2 history from the API, v3 from chain) and the 'indexer down' path were exercised. The code path for an indexer that has v3 was not run against real data."
+  ],
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ]
+}
