@@ -1,0 +1,39 @@
+{
+  "base": "http://localhost:3111",
+  "indexer": "https://deed-lovat.vercel.app",
+  "position": "5",
+  "results": [
+    {
+      "name": "withdraw collateral from the UI to bring the position under the rescue line",
+      "ok": true,
+      "detail": "0.00498 BTC, Done. view transaction"
+    },
+    {
+      "name": "chain: ICR is now under 120% and above 110%",
+      "ok": true,
+      "detail": "116.99%"
+    },
+    {
+      "name": "rescue page lists the at-risk position and the start button is enabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a stranger starts the rescue auction from the At risk list",
+      "ok": false,
+      "detail": "This position is not under the rescue line."
+    }
+  ],
+  "txs": [
+    {
+      "who": "bob",
+      "to": "0x37E88A5D7397719e643e7927fCE25eA3E0DB1395",
+      "selector": "0xb460af94",
+      "pageGas": "700000",
+      "hash": "0x786874fd432c0f182118c9b2627e2058a897b464d98a7868d7fb175cb4a14202"
+    }
+  ],
+  "untested": [],
+  "consoleErrors": [],
+  "crashed": "locator.waitFor: Timeout 90000ms exceeded."
+}

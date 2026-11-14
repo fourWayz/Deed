@@ -1,0 +1,9 @@
+**/node_modules
+lib
+out
+cache
+broadcast
+frontend
+test
+.git
+.env

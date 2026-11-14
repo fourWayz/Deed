@@ -1,0 +1,36 @@
+{
+  "base": "http://localhost:3111",
+  "indexer": "https://deed-lovat.vercel.app",
+  "position": "5",
+  "results": [
+    {
+      "name": "Recovery Mode (simulated, close blocked): banner and disabled buttons follow DeedLens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode banner at 390px, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated, close allowed): banner and disabled buttons follow DeedLens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "withdraw collateral from the UI to bring the position under the rescue line",
+      "ok": false,
+      "detail": "0.00476 BTC, An unknown RPC error occurred."
+    },
+    {
+      "name": "chain: ICR is now under 120% and above 110%",
+      "ok": false,
+      "detail": "132.78%"
+    }
+  ],
+  "txs": [],
+  "untested": [],
+  "consoleErrors": [],
+  "crashed": "locator.waitFor: Timeout 90000ms exceeded."
+}

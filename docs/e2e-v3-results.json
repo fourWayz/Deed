@@ -1,0 +1,290 @@
+{
+  "startedAt": "2026-11-12T16:36:14.696Z",
+  "wallets": {
+    "seller": "0x522bC0c3919fF823173ca4145feEcE905F772ffE",
+    "buyer": "0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6",
+    "treasury": "0x4989CC7150a869D6b07540B54B96fD02c5e0537c"
+  },
+  "results": {
+    "system": {
+      "oracle": "71734.09873",
+      "twap": "78477.120996195897327721",
+      "tcr": "257.55%",
+      "recoveryMode": false,
+      "marketFeeBps": 50,
+      "auctionFeeBps": 50
+    },
+    "positionA": {
+      "deed": "1",
+      "vault": "0x64dc3d284754cc39eb5167DD15D77bad5E27D185",
+      "lens": {
+        "collateral": "0.041871423633864825",
+        "debt": "2001.8",
+        "icr": "150.07%",
+        "rate": 100
+      }
+    },
+    "borrowRefinance": {
+      "borrowed": "100",
+      "borrowFee": "0.1",
+      "rateBefore": 100,
+      "rateAfter": 100,
+      "refinanceFee": "0.380380007643875111"
+    },
+    "sale": {
+      "price": "100",
+      "fee": "0.5",
+      "sellerReceived": "99.5",
+      "feeBps": 50
+    },
+    "close": {
+      "musdPaid": "1902.280593433972229638",
+      "btcReturned": "0.041871423633864825",
+      "status": 2
+    },
+    "rescueBefore": {
+      "collateral": "0.032748807974404764",
+      "debt": "2001.8",
+      "icr": "116.98%"
+    },
+    "rescue": {
+      "deed": "2",
+      "icrBefore": "116.98%",
+      "icrAfter": "150.70%",
+      "pricePaid": "538.022476829156779853",
+      "fee": "2.690112384145783899",
+      "sellerPayout": "535.332364445010995954",
+      "oracle": "71502.51296",
+      "twap": "78477.18811757213922719",
+      "equityOf": "539.756211464020064403"
+    },
+    "claim": {
+      "deed": "3",
+      "status": 4,
+      "surplusBTC": "0.005843983296922934",
+      "redeemedBy": "a third party before this script could",
+      "redemptionTx": "0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec"
+    }
+  },
+  "resumedAt": "2026-11-12T16:52:53.375Z",
+  "txs": [
+    {
+      "who": "seller",
+      "label": "seller opens position A",
+      "hash": "0x9a2b5f2adb69cb6d152c6f0b0609d92dfbecc1b1f71e9eef064a4a8d2a8a38b3",
+      "status": "success",
+      "block": 16737600
+    },
+    {
+      "who": "seller",
+      "label": "claimSurplus with nothing to claim reverts clearly",
+      "hash": "0xe08aa57992b6ef0651e46a1e0ff403bb0d80545041157d61725b8ca41e39e795",
+      "status": "reverted",
+      "block": 16737601,
+      "revertReason": "NothingToClaim"
+    },
+    {
+      "who": "seller",
+      "label": "seller borrows 100 MUSD more through the vault",
+      "hash": "0x889378dd902779fc8e8a75bdaf8b2984783e40fd98924cbf5d47096b703fd9bc",
+      "status": "success",
+      "block": 16737608
+    },
+    {
+      "who": "seller",
+      "label": "seller refinances to the current system rate",
+      "hash": "0x84b4e98df03a670e8e305ca9d3afb97f513a00040dd48ed39eddf50026681faf",
+      "status": "success",
+      "block": 16737614
+    },
+    {
+      "who": "seller",
+      "label": "seller lists A for 100 MUSD",
+      "hash": "0xcf278d09721800180dda6d4cfa593e86d8368b0b6ed4351e80cb6a3ef09689c9",
+      "status": "success",
+      "block": 16737621
+    },
+    {
+      "who": "seller",
+      "label": "seller cannot borrow against a listed vault",
+      "hash": "0xa191552cc5323cb0829b91e0f93c324a8d1a4e658a6ee25f28e69f6828933ba2",
+      "status": "reverted",
+      "block": 16737622,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "seller",
+      "label": "seller cannot refinance a listed vault",
+      "hash": "0xe8c715d34891eca0ad7f3afe6a8feffdec567b0236960bb7582de70b9fd4f3c0",
+      "status": "reverted",
+      "block": 16737630,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for market",
+      "hash": "0xa5dec4298ba62f0ca3e25577cc430122037ad206edb9b1f767717968491ad536",
+      "status": "success",
+      "block": 16737639
+    },
+    {
+      "who": "buyer",
+      "label": "buyer buys A",
+      "hash": "0x483b9614a273e6a14f0ebb31b6bc4fce8b5ab498fa961efb38eb5c9c17da1f44",
+      "status": "success",
+      "block": 16737646
+    },
+    {
+      "who": "seller",
+      "label": "seller claims price minus fee",
+      "hash": "0xdb7606ed3cbc045c121732a327179d9d9b6c3322b2494cd90c62696029c44a84",
+      "status": "success",
+      "block": 16737660
+    },
+    {
+      "who": "treasury",
+      "label": "treasury claims the fee",
+      "hash": "0xdf0769b6770ec727bab55a7161ff8fe3dfe174cbc7af5c388dbe1d5d04397d72",
+      "status": "success",
+      "block": 16737665
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for the vault",
+      "hash": "0x774e00904bc4ccd2b473d7147ba5e47d1c8e0e83243cb21caec638d60e850abc",
+      "status": "success",
+      "block": 16737671
+    },
+    {
+      "who": "buyer",
+      "label": "buyer closes the trove through the vault",
+      "hash": "0xb10557125c20bbb188a8a0ea6272ce4332c3d521ad052f0ddd71c022a4b08005",
+      "status": "success",
+      "block": 16737676
+    },
+    {
+      "who": "buyer",
+      "label": "buyer sends 0.002047258704220257 BTC to seller",
+      "hash": "0xa87e758e165dff47a47ce6f7bb19a4523a7023e67c62b36e3218c31e675ce1ed",
+      "status": "success",
+      "block": 16737678
+    },
+    {
+      "who": "seller",
+      "label": "seller opens position B (about 117%)",
+      "hash": "0x31b1327e26ba4c3dbb497b20207a1beb47adb34cc20592baf9cece299b2be21f",
+      "status": "success",
+      "block": 16737682
+    },
+    {
+      "who": "buyer",
+      "label": "buyer starts the rescue (ICR is under the line)",
+      "hash": "0x54d55873d048d6cfc2410c402184a9b28f22b5b9f00fa5cbf28aae36cdd7cdbf",
+      "status": "success",
+      "block": 16737686
+    },
+    {
+      "who": "seller",
+      "label": "seller cannot borrow against an auctioned vault",
+      "hash": "0x78824c230214005d0c04ebf2c01dc0de86ebc537fd687866743388ba2e027dc8",
+      "status": "reverted",
+      "block": 16737688,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for auction",
+      "hash": "0x7c36a7ff8f71b0452f05596efa00d315e5c73c1eb392fac1e64a42c235f61890",
+      "status": "success",
+      "block": 16737699
+    },
+    {
+      "who": "buyer",
+      "label": "buyer wins the auction and tops up in the same tx",
+      "hash": "0x8d6d412367d36476f4a62b101b87fb1651e757b65c27e031a5a23be19a38b872",
+      "status": "success",
+      "block": 16737748
+    },
+    {
+      "who": "seller",
+      "label": "seller claims the auction payout",
+      "hash": "0x3c47461f7f4859faeb7949974dd81657d1fb4d3e3bf58f9302626d54d4911aee",
+      "status": "success",
+      "block": 16737775
+    },
+    {
+      "who": "treasury",
+      "label": "treasury claims the auction fee",
+      "hash": "0x469033a71f617501f69ae34c58dccf45898c21f1b716f5f7147d623828c0c0d9",
+      "status": "success",
+      "block": 16737777
+    },
+    {
+      "who": "buyer",
+      "label": "buyer approves MUSD for the vault",
+      "hash": "0x1844ed55a5b917554b6432ca4c2aa7f3fc44b5ce26dec9c9057e536d0a0553f4",
+      "status": "success",
+      "block": 16737781
+    },
+    {
+      "who": "buyer",
+      "label": "winner closes position B through the vault",
+      "hash": "0x0315d4f07b5951a457b10e10c9697756737c2b9054e0cc34a842c9d0169d202f",
+      "status": "success",
+      "block": 16737783
+    },
+    {
+      "who": "buyer",
+      "label": "buyer sends 0.031004632642377085 BTC to seller",
+      "hash": "0x9f4d037ef30381bc6673ed91a94929263b6663efb82354586fdcf5db9dcb191a",
+      "status": "success",
+      "block": 16737785
+    },
+    {
+      "who": "seller",
+      "label": "seller opens position C (about 111%)",
+      "hash": "0x953c4bfe8c8c1c9562df9fd3ac27bf5b16254b85b4582ed06b26cabb08715d8d",
+      "status": "success",
+      "block": 16737789
+    },
+    {
+      "who": "seller",
+      "label": "seller sends 759.404593996316448307 MUSD to buyer",
+      "hash": "0x40d0aa7bf18834d29f5c5cbcee8a49385a5b11ef4a82c65e8788b4ba0260d246",
+      "status": "success",
+      "block": 16737792
+    },
+    {
+      "who": "third party",
+      "label": "a third party redeems this trove completely",
+      "hash": "0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec",
+      "status": "success",
+      "block": 16737791,
+      "from": "0xd13fba88f51832840174b5fbfa58b54cdad76c67"
+    },
+    {
+      "who": "buyer",
+      "label": "a stranger cannot claim the vault's surplus",
+      "hash": "0x1698a93123a3bddd183b09257bbad8130261f21cbd64bb2be2d7a76ae3f5bef7",
+      "status": "reverted",
+      "block": 16737830,
+      "revertReason": "NotController"
+    },
+    {
+      "who": "seller",
+      "label": "seller claims the surplus through the vault (claimCollateral)",
+      "hash": "0x3a672efeb8862ebe27d47614436456b7e487dfc173b91b0b359365b3ac57fa67",
+      "status": "success",
+      "block": 16737833
+    },
+    {
+      "who": "seller",
+      "label": "a second claim reverts clearly",
+      "hash": "0xcae60f97336094492664c4d31c170bbd17c25add3f78cba887d59b7771df8739",
+      "status": "reverted",
+      "block": 16737836,
+      "revertReason": "NothingToClaim"
+    }
+  ],
+  "finishedAt": "2026-11-12T16:53:36.172Z"
+}

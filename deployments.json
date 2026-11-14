@@ -1,12 +1,21 @@
 {
+  "version": "v3",
   "chainId": 31611,
   "evmVersion": "london",
-  "deedNFT": "0x848063cbD0230B6A4345311Ec090FDb51F49b681",
-  "factory": "0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc",
-  "market": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
-  "auction": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
-  "spotSource": "0xc8978277f2BCe7c06F9612d457c12B24F364Ec24",
+  "deedNFT": "0x9C92E662cB7de018162E1d06F1f977f6A0B5547f",
+  "factory": "0xb8602DBF0e5BBDE81C504C87F860fbbe7DF125CD",
+  "market": "0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd",
+  "auction": "0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355",
+  "lens": "0xDd628bBb4663549E0Af7815E93D14002D1f9Dde1",
+  "spotSource": "0xda3e5a7785Ba49B87B5884dB7662e44Af31f4d00",
+  "spotSourceKind": "PairTwapPrice (time weighted, 3600 s minimum window)",
   "dexPair": "0xd16A5Df82120ED8D626a1a15232bFcE2366d6AA9",
+  "treasury": "0x4989CC7150a869D6b07540B54B96fD02c5e0537c",
+  "fees": {
+    "marketBps": 50,
+    "auctionBps": 50,
+    "maxBps": 100
+  },
   "musd": "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503",
   "priceFeed": "0x86bCF0841622a5dAC14A313a15f96A95421b9366",
   "troveManager": "0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0",
@@ -16,23 +25,50 @@
   "auctionParams": {
     "rescueICR": "1200000000000000000",
     "safeICR": "1500000000000000000",
-    "maxDeviationBps": 1000
+    "maxDeviationBps": 2000
   },
+  "deployBlock": 16737425,
   "deployTxs": {
-    "PairSpotPrice": "0x4df74512cd9cfb4640c659df793b4ef37a04f5becc28d65f6b523b82a726855b",
-    "DeedNFT": "0x21117144244d548a8bd8bae169c7db1bb013e70fee2d6025ce25c095c9b8b472",
-    "DeedFactory": "0xa2e62948bc44f3a1fe6c02e9fce961947f454456440beaba183a013c6cf68be2",
-    "DeedMarket": "0x5f29d196a6d05f63071f920b6e404c6715b547d295d20ae33d15c03e6e375084",
-    "RescueAuction": "0x204c86713ea6f4cdff3381556dec1ef8c7706974c3ae3e6ee00fc607b450b74a",
-    "DeedNFT.init": "0x0dd54e0f94e5e89959cecf85e2019c05757b7a7def971eb3d1e8257534a4cc04"
+    "PairTwapPrice": "0x17a06eba35583e2c4bf434cb949c9ea8c522f9d421356b402fd4deabf4a8060c",
+    "DeedNFT": "0x0b786f9acc860bdd94cdcbe4b7bee1419e565f06f71b9a29792a4639c250e6b6",
+    "DeedFactory": "0xed05c2d5f43d7fea51ee7e112466820f90796c4faa43086b7b9a90534eaaea54",
+    "DeedMarket": "0x4eaf7c4bfcb2df90a4debf0db3f912aaf6a9237af2f62aa72ddfc1be4c3de232",
+    "RescueAuction": "0x2116c8f7ff1a18cd0d3ef7e2e8f830b1d7bad762809d36d3f550ee1fe2b1b211",
+    "DeedLens": "0xcd0216dbe397f5656481c1fffd2949af0bfbb826a1042d14de5d859b1655c552",
+    "DeedNFT.init": "0xc16ca7eb094318485e59efcb948fd519bc3f69cffb7834f46b793ad85b9e045e"
   },
-  "previousDeployment": {
-    "status": "superseded",
-    "note": "first deployment, cancun build, 130% public rescue line and 50% floor. Still on chain, do not use.",
-    "deedNFT": "0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755",
-    "factory": "0x2928D2Dc566ec5f5D859F76B65CD829de5056d84",
-    "market": "0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F",
-    "auction": "0x4CabFbD149cbC44a61aD574c1baE95c277Cb145B",
-    "spotSource": "0x699Ea2CE021B94FDD8f9E55e4bD12CBAA41e86e5"
+  "previousDeployments": {
+    "v2": {
+      "deedNFT": "0x848063cbD0230B6A4345311Ec090FDb51F49b681",
+      "factory": "0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc",
+      "market": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "auction": "0x190fB7559BB8023ecAA7c90CFcC17187042B89F9",
+      "spotSource": "0xc8978277f2BCe7c06F9612d457c12B24F364Ec24",
+      "deployTxs": {
+        "PairSpotPrice": "0x4df74512cd9cfb4640c659df793b4ef37a04f5becc28d65f6b523b82a726855b",
+        "DeedNFT": "0x21117144244d548a8bd8bae169c7db1bb013e70fee2d6025ce25c095c9b8b472",
+        "DeedFactory": "0xa2e62948bc44f3a1fe6c02e9fce961947f454456440beaba183a013c6cf68be2",
+        "DeedMarket": "0x5f29d196a6d05f63071f920b6e404c6715b547d295d20ae33d15c03e6e375084",
+        "RescueAuction": "0x204c86713ea6f4cdff3381556dec1ef8c7706974c3ae3e6ee00fc607b450b74a",
+        "DeedNFT.init": "0x0dd54e0f94e5e89959cecf85e2019c05757b7a7def971eb3d1e8257534a4cc04"
+      },
+      "auctionParams": {
+        "rescueICR": "1200000000000000000",
+        "safeICR": "1500000000000000000",
+        "maxDeviationBps": 1000
+      },
+      "status": "superseded",
+      "note": "second deployment, london build, 120% public rescue line, 80% floor, DEX guard on instant reserves. Closing a position with pending redistribution reverts, no borrow/refinance, no fees. Still on chain, do not use.",
+      "sourcify": "exact match"
+    },
+    "v1": {
+      "status": "superseded",
+      "note": "first deployment, cancun build, 130% public rescue line and 50% floor. Still on chain, do not use.",
+      "deedNFT": "0xfE5Db5D095f6c413f778Af683Aa9C5a92bee6755",
+      "factory": "0x2928D2Dc566ec5f5D859F76B65CD829de5056d84",
+      "market": "0xd371095E5ec20154dCB4Bb6076cC1A35C6b8852F",
+      "auction": "0x4CabFbD149cbC44a61aD574c1baE95c277Cb145B",
+      "spotSource": "0x699Ea2CE021B94FDD8f9E55e4bD12CBAA41e86e5"
+    }
   }
 }

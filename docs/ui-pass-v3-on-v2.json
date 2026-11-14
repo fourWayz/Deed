@@ -1,0 +1,254 @@
+{
+  "base": "http://localhost:3111",
+  "results": [
+    {
+      "name": "route / at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route / at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /positions at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /positions at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /activity at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /activity at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /start at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /start at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "RPC down: Market shows a readable error with Retry",
+      "ok": true,
+      "detail": "Could not load positions: HTTP request failed. Retry"
+    },
+    {
+      "name": "landing shows problem sentence",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows track",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows target users",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows how it works",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows safety rules",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows fee disclosure",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows video placeholder",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing stats match an independent chain scan (positions, wallets)",
+      "ok": true,
+      "detail": "ui 3 positions / 2 wallets, chain 3 / 2"
+    },
+    {
+      "name": "landing volume matches the chain scan",
+      "ok": true,
+      "detail": "ui 1,889.22 MUSD, chain 1889.21780900382310418 MUSD"
+    },
+    {
+      "name": "landing fees line reads 0 on a deployment with no fee",
+      "ok": true,
+      "detail": "0.00 MUSD"
+    },
+    {
+      "name": "activity lists recent transactions with explorer links",
+      "ok": true,
+      "detail": "12 rows"
+    },
+    {
+      "name": "empty wallet sees the empty state on Positions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "wizard, empty wallet: step 1 open with faucet link, steps 2 and 3 locked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "position page: entire debt matches TroveManager (within accrual since the read)",
+      "ok": true,
+      "detail": "ui 2002.84, chain 2002.8378"
+    },
+    {
+      "name": "debt breakdown rows add up to the entire debt",
+      "ok": true,
+      "detail": "2001.79 + 1.05 + 0 vs 2002.84"
+    },
+    {
+      "name": "health gauge is on screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "borrow and refinance explain that v2 vaults cannot",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "list form shows the fee preview (no fee on this deployment)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "borrow preview shows the fee and the new ICR",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated): banner explains what is blocked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated): withdraw is disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated): borrow and refinance are disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated): add collateral and repay stay enabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Recovery Mode (simulated): close follows Mezo's mint-list rule",
+      "ok": true,
+      "detail": "close disabled: true"
+    },
+    {
+      "name": "Recovery Mode banner at 390px, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "list Deed #2 from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "market shows the listing with the buyer's fee line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cancel the listing from the UI",
+      "ok": true,
+      "detail": "Done. view transaction"
+    },
+    {
+      "name": "closed position shows the surplus state instead of a bare button",
+      "ok": true,
+      "detail": "Mezo is holding 0."
+    },
+    {
+      "name": "an impossible withdrawal shows a plain-language error, no raw selector",
+      "ok": true,
+      "detail": "The contract refused this action: Arithmetic operation resulted in underflow or overflow."
+    },
+    {
+      "name": "wizard, holder: step 2 done, step 3 shows the list form",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [
+    {
+      "who": "holder",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0x218160aa",
+      "pageGas": "700000",
+      "hash": "0xb859161a3c9827da6de94811b565af81c0b69b48523d65117003e410203904fd"
+    },
+    {
+      "who": "holder",
+      "to": "0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99",
+      "selector": "0x40e58ee5",
+      "pageGas": "700000",
+      "hash": "0x1f22568051232b4abeb7bd7b4c232e4f6689398727d86893f7411ac9b751933c"
+    }
+  ],
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ]
+}

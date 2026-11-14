@@ -1,0 +1,288 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "deed_",
+        "type": "address",
+        "internalType": "contract DeedNFT"
+      },
+      {
+        "name": "factory_",
+        "type": "address",
+        "internalType": "contract DeedFactory"
+      },
+      {
+        "name": "borrowerOps_",
+        "type": "address",
+        "internalType": "contract IBorrowerOperations"
+      },
+      {
+        "name": "troveManager_",
+        "type": "address",
+        "internalType": "contract ITroveManager"
+      },
+      {
+        "name": "priceFeed_",
+        "type": "address",
+        "internalType": "contract IPriceFeed"
+      },
+      {
+        "name": "musd_",
+        "type": "address",
+        "internalType": "contract IMUSD"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "GAS_COMPENSATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "borrowerOps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IBorrowerOperations"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract DeedNFT"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "factory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract DeedFactory"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "musd",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMUSD"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "position",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "v",
+        "type": "tuple",
+        "internalType": "struct DeedLens.PositionView",
+        "components": [
+          {
+            "name": "vault",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "holder",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "lockedBy",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "status",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "collateral",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "principal",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "interest",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "debt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "icr",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "rate",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "collateralValue",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "equity",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "surplus",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "price",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "tcr",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "recoveryMode",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "priceStale",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "canClose",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "canWithdraw",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "canBorrow",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "canRefinance",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "priceFeed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IPriceFeed"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "system",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "price",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "tcr",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "recoveryMode",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "priceStale",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "troveManager",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ITroveManager"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "UnknownDeed",
+    "inputs": []
+  }
+]

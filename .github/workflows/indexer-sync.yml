@@ -1,0 +1,40 @@
+name: indexer-sync
+
+# Keeps the Supabase index current. Needs two repository secrets, see indexer/README.md:
+#   DATABASE_URL       Supabase transaction pooler URI (port 6543)
+#   MEZO_TESTNET_RPC   Mezo testnet RPC URL
+on:
+  schedule:
+    # GitHub may delay or skip scheduled runs under load; a missed run is caught up by the next one
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# never two syncs at once; a run that starts while one is in progress waits instead of overlapping
+concurrency:
+  group: indexer-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: indexer/package-lock.json
+      - run: npm ci --omit=dev
+      - name: Sync to chain head
+        # npm run once exits 1 on any RPC or database error, which turns the run red and notifies the repo owner
+        run: npm run once
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MEZO_TESTNET_RPC: ${{ secrets.MEZO_TESTNET_RPC }}

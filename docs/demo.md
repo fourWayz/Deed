@@ -45,7 +45,118 @@ Then:
 
 ---
 
-# Live run on the second deployment
+# Live run on the third deployment (v3, current)
+
+Mezo testnet (31611), run with `scripts/e2e-v3.mjs` against the addresses in `deployments.json`. Every transaction below
+is on chain. Three wallets: **seller**, **buyer** and **treasury** (the deployer, which receives the fees).
+
+What this run shows, each with the transaction that proves it:
+
+| Change | Evidence in this run |
+| --- | --- |
+| `borrow` through the vault | seller borrowed 100 MUSD, MUSD reached the holder, vault kept none, principal rose by 100 + 0.1 fee |
+| `refinance` through the vault | the refinancing fee (20% of the borrowing fee on the net debt) landed on the debt, 0.38 MUSD; the system rate was still 1%, so the trove's rate stayed 100 bps |
+| frozen while listed or auctioned | `borrow` and `refinance` on a listed vault and `borrow` on an auctioned vault revert `NotController` (reverts in the table) |
+| fee-bearing sale | 100 MUSD sale: seller 99.5 + treasury 0.5, market balance 0 after both claims |
+| `closeTrove` through the vault | new owner closed with the entire debt (paid 1,902.280593 MUSD, needed 1,902.280567); vault left with 0 MUSD, 0 BTC |
+| rescue with the TWAP guard and fee | rescue started and won under the `PairTwapPrice` guard; 538.022 MUSD = seller 535.332 + fee 2.690; auction balance 0 |
+| `claimCollateral` through the vault | the vault's trove was closed by a redemption, the holder claimed 0.005844 BTC, a second claim reverts `NothingToClaim`, a stranger reverts `NotController` |
+
+Not shown live: **closing with pending redistribution.** Testnet's Stability Pool holds 86M MUSD, so a liquidation never
+redistributes there. That case runs on a fork of the real MUSD contracts (`test/fork/V3Fork.t.sol`), where the Stability Pool
+is mocked empty, and in mock tests.
+
+## Deploy (v3)
+
+Built for the london EVM (`foundry.toml`), one `forge script` broadcast with `DeedNFT.init` inside it, block 16737425.
+
+| Step | Transaction |
+| --- | --- |
+| PairTwapPrice | [`0x17a06eba…a8060c`](https://explorer.test.mezo.org/tx/0x17a06eba35583e2c4bf434cb949c9ea8c522f9d421356b402fd4deabf4a8060c) |
+| DeedNFT | [`0x0b786f9a…50e6b6`](https://explorer.test.mezo.org/tx/0x0b786f9acc860bdd94cdcbe4b7bee1419e565f06f71b9a29792a4639c250e6b6) |
+| DeedFactory | [`0xed05c2d5…aaea54`](https://explorer.test.mezo.org/tx/0xed05c2d5f43d7fea51ee7e112466820f90796c4faa43086b7b9a90534eaaea54) |
+| DeedMarket | [`0x4eaf7c4b…3de232`](https://explorer.test.mezo.org/tx/0x4eaf7c4bfcb2df90a4debf0db3f912aaf6a9237af2f62aa72ddfc1be4c3de232) |
+| RescueAuction | [`0x2116c8f7…b1b211`](https://explorer.test.mezo.org/tx/0x2116c8f7ff1a18cd0d3ef7e2e8f830b1d7bad762809d36d3f550ee1fe2b1b211) |
+| DeedLens | [`0xcd0216db…55c552`](https://explorer.test.mezo.org/tx/0xcd0216dbe397f5656481c1fffd2949af0bfbb826a1042d14de5d859b1655c552) |
+| DeedNFT.init | [`0xc16ca7eb…9e045e`](https://explorer.test.mezo.org/tx/0xc16ca7eb094318485e59efcb948fd519bc3f69cffb7834f46b793ad85b9e045e) |
+
+Treasury `0x4989CC7150a869D6b07540B54B96fD02c5e0537c`, market fee 50 bps, auction fee 50 bps (the contracts cap
+both at 100). Price guard: `PairTwapPrice` `0xda3e5a7785Ba49B87B5884dB7662e44Af31f4d00` over the Tigris pool, 3,600 s window, `maxDeviationBps` =
+**2000**. That is 20%, not the 200 bps the code defaults to, because the live testnet pool is not
+arbitraged: at deploy time the TWAP was 78,477 against an oracle of 71,769, a 9.3% gap that was still widening (10.1% a few minutes
+earlier). A 200 bps limit would have refused every rescue on this pool, see [security.md](security.md). Source: Sourcify exact
+match for all six contracts (creation and runtime), see [verification.md](verification.md).
+
+Readings during the run: oracle 71734.09873, TWAP 78477.120, system TCR 257.55%, Recovery Mode off.
+
+## Numbers
+
+- **Position A (Deed #1)**: 0.041871423633864825 BTC, debt 2001.8 MUSD, ICR 150.07%, rate 100 bps.
+- **Borrow / refinance**: borrowed 100, borrowing fee 0.1, refinancing fee 0.380380007643875111, rate 100 -> 100 bps.
+- **Sale**: price 100, fee 0.5 (50 bps), seller received 99.5.
+- **Rescue (Deed #2)**: ICR 116.98% -> 150.70%; contract `equityOf` 539.756211464020064403 at oracle 71502.51296 (TWAP 78477.188, so the guard saw a 9.75% gap and the 20% limit let it through); price paid 538.022476829156779853 = seller 535.332364445010995954 + fee 2.690112384145783899.
+- **claimCollateral (Deed #3)**: opened at 110.89% ICR, the lowest in the system. About two blocks later **a third party** (`0xd13f…6c67`, calling a contract) redeemed it completely ([`0x69783574…33f3ec`](https://explorer.test.mezo.org/tx/0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec)) before this script's own redemption went out, which then reverted `Unable to redeem any amount`. The surplus of 0.005843983296922934 BTC sat in the CollSurplusPool until the holder claimed it through the vault. A redemption bot is evidently watching the lowest-ICR troves: the same thing closed the second deployment's rescue position earlier (its surplus was claimed in the recycle step below).
+
+## What went wrong along the way
+
+- The first run stopped after the rescue bid at a check in the script itself: it compared the fee with the Dutch price quoted
+  *before* sending, but the price falls between the quote and the block (quoted 538.222, paid 538.022). The contract was right
+  (fee + proceeds equalled the price paid, which the resumed run then verified from the `Won` event). The script reads the price
+  from the event now and `RESUME_B` finished the run from the chain state, so the hashes below come from three consecutive
+  invocations. The pre-bid readings of the rescue (oracle, TWAP, equity, ICR) were copied from the first run's console output.
+- The wallets were out of test BTC (none could open a trove, which needs about 0.031 BTC). Before the run, two superseded
+  second-deployment positions were closed and the surplus of a third was claimed with `scripts/recycle-v2.mjs`, listed last.
+- The third party's redemption tx is in the table as a row sent by someone else, it is not one of ours.
+
+## All transactions (v3 run)
+
+| # | Who | What | Result | Block | Transaction |
+| --- | --- | --- | --- | --- | --- |
+| 1 | seller | seller opens position A | success | 16737600 | [`0x9a2b5f2a…8a38b3`](https://explorer.test.mezo.org/tx/0x9a2b5f2adb69cb6d152c6f0b0609d92dfbecc1b1f71e9eef064a4a8d2a8a38b3) |
+| 2 | seller | claimSurplus with nothing to claim reverts clearly | reverts `NothingToClaim` | 16737601 | [`0xe08aa579…39e795`](https://explorer.test.mezo.org/tx/0xe08aa57992b6ef0651e46a1e0ff403bb0d80545041157d61725b8ca41e39e795) |
+| 3 | seller | seller borrows 100 MUSD more through the vault | success | 16737608 | [`0x889378dd…3fd9bc`](https://explorer.test.mezo.org/tx/0x889378dd902779fc8e8a75bdaf8b2984783e40fd98924cbf5d47096b703fd9bc) |
+| 4 | seller | seller refinances to the current system rate | success | 16737614 | [`0x84b4e98d…681faf`](https://explorer.test.mezo.org/tx/0x84b4e98df03a670e8e305ca9d3afb97f513a00040dd48ed39eddf50026681faf) |
+| 5 | seller | seller lists A for 100 MUSD | success | 16737621 | [`0xcf278d09…9689c9`](https://explorer.test.mezo.org/tx/0xcf278d09721800180dda6d4cfa593e86d8368b0b6ed4351e80cb6a3ef09689c9) |
+| 6 | seller | seller cannot borrow against a listed vault | reverts `NotController` | 16737622 | [`0xa191552c…933ba2`](https://explorer.test.mezo.org/tx/0xa191552cc5323cb0829b91e0f93c324a8d1a4e658a6ee25f28e69f6828933ba2) |
+| 7 | seller | seller cannot refinance a listed vault | reverts `NotController` | 16737630 | [`0xe8c715d3…d4f3c0`](https://explorer.test.mezo.org/tx/0xe8c715d34891eca0ad7f3afe6a8feffdec567b0236960bb7582de70b9fd4f3c0) |
+| 8 | buyer | buyer approves MUSD for market | success | 16737639 | [`0xa5dec429…1ad536`](https://explorer.test.mezo.org/tx/0xa5dec4298ba62f0ca3e25577cc430122037ad206edb9b1f767717968491ad536) |
+| 9 | buyer | buyer buys A | success | 16737646 | [`0x483b9614…da1f44`](https://explorer.test.mezo.org/tx/0x483b9614a273e6a14f0ebb31b6bc4fce8b5ab498fa961efb38eb5c9c17da1f44) |
+| 10 | seller | seller claims price minus fee | success | 16737660 | [`0xdb7606ed…c44a84`](https://explorer.test.mezo.org/tx/0xdb7606ed3cbc045c121732a327179d9d9b6c3322b2494cd90c62696029c44a84) |
+| 11 | treasury | treasury claims the fee | success | 16737665 | [`0xdf0769b6…397d72`](https://explorer.test.mezo.org/tx/0xdf0769b6770ec727bab55a7161ff8fe3dfe174cbc7af5c388dbe1d5d04397d72) |
+| 12 | buyer | buyer approves MUSD for the vault | success | 16737671 | [`0x774e0090…850abc`](https://explorer.test.mezo.org/tx/0x774e00904bc4ccd2b473d7147ba5e47d1c8e0e83243cb21caec638d60e850abc) |
+| 13 | buyer | buyer closes the trove through the vault | success | 16737676 | [`0xb1055712…b08005`](https://explorer.test.mezo.org/tx/0xb10557125c20bbb188a8a0ea6272ce4332c3d521ad052f0ddd71c022a4b08005) |
+| 14 | buyer | buyer sends 0.002047258704220257 BTC to seller | success | 16737678 | [`0xa87e758e…5ce1ed`](https://explorer.test.mezo.org/tx/0xa87e758e165dff47a47ce6f7bb19a4523a7023e67c62b36e3218c31e675ce1ed) |
+| 15 | seller | seller opens position B (about 117%) | success | 16737682 | [`0x31b1327e…2be21f`](https://explorer.test.mezo.org/tx/0x31b1327e26ba4c3dbb497b20207a1beb47adb34cc20592baf9cece299b2be21f) |
+| 16 | buyer | buyer starts the rescue (ICR is under the line) | success | 16737686 | [`0x54d55873…d7cdbf`](https://explorer.test.mezo.org/tx/0x54d55873d048d6cfc2410c402184a9b28f22b5b9f00fa5cbf28aae36cdd7cdbf) |
+| 17 | seller | seller cannot borrow against an auctioned vault | reverts `NotController` | 16737688 | [`0x78824c23…027dc8`](https://explorer.test.mezo.org/tx/0x78824c230214005d0c04ebf2c01dc0de86ebc537fd687866743388ba2e027dc8) |
+| 18 | buyer | buyer approves MUSD for auction | success | 16737699 | [`0x7c36a7ff…f61890`](https://explorer.test.mezo.org/tx/0x7c36a7ff8f71b0452f05596efa00d315e5c73c1eb392fac1e64a42c235f61890) |
+| 19 | buyer | buyer wins the auction and tops up in the same tx | success | 16737748 | [`0x8d6d4123…38b872`](https://explorer.test.mezo.org/tx/0x8d6d412367d36476f4a62b101b87fb1651e757b65c27e031a5a23be19a38b872) |
+| 20 | seller | seller claims the auction payout | success | 16737775 | [`0x3c47461f…911aee`](https://explorer.test.mezo.org/tx/0x3c47461f7f4859faeb7949974dd81657d1fb4d3e3bf58f9302626d54d4911aee) |
+| 21 | treasury | treasury claims the auction fee | success | 16737777 | [`0x469033a7…c0c0d9`](https://explorer.test.mezo.org/tx/0x469033a71f617501f69ae34c58dccf45898c21f1b716f5f7147d623828c0c0d9) |
+| 22 | buyer | buyer approves MUSD for the vault | success | 16737781 | [`0x1844ed55…0553f4`](https://explorer.test.mezo.org/tx/0x1844ed55a5b917554b6432ca4c2aa7f3fc44b5ce26dec9c9057e536d0a0553f4) |
+| 23 | buyer | winner closes position B through the vault | success | 16737783 | [`0x0315d4f0…9d202f`](https://explorer.test.mezo.org/tx/0x0315d4f07b5951a457b10e10c9697756737c2b9054e0cc34a842c9d0169d202f) |
+| 24 | buyer | buyer sends 0.031004632642377085 BTC to seller | success | 16737785 | [`0x9f4d037e…cb191a`](https://explorer.test.mezo.org/tx/0x9f4d037ef30381bc6673ed91a94929263b6663efb82354586fdcf5db9dcb191a) |
+| 25 | seller | seller opens position C (about 111%) | success | 16737789 | [`0x953c4bfe…715d8d`](https://explorer.test.mezo.org/tx/0x953c4bfe8c8c1c9562df9fd3ac27bf5b16254b85b4582ed06b26cabb08715d8d) |
+| 26 | seller | seller sends 759.404593996316448307 MUSD to buyer | success | 16737792 | [`0x40d0aa7b…60d246`](https://explorer.test.mezo.org/tx/0x40d0aa7bf18834d29f5c5cbcee8a49385a5b11ef4a82c65e8788b4ba0260d246) |
+| 27 | third party | a third party redeems this trove completely | success | 16737791 | [`0x69783574…33f3ec`](https://explorer.test.mezo.org/tx/0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec) |
+| 28 | buyer | a stranger cannot claim the vault's surplus | reverts `NotController` | 16737830 | [`0x1698a931…f5bef7`](https://explorer.test.mezo.org/tx/0x1698a93123a3bddd183b09257bbad8130261f21cbd64bb2be2d7a76ae3f5bef7) |
+| 29 | seller | seller claims the surplus through the vault (claimCollateral) | success | 16737833 | [`0x3a672efe…57fa67`](https://explorer.test.mezo.org/tx/0x3a672efeb8862ebe27d47614436456b7e487dfc173b91b0b359365b3ac57fa67) |
+| 30 | seller | a second claim reverts clearly | reverts `NothingToClaim` | 16737836 | [`0xcae60f97…df8739`](https://explorer.test.mezo.org/tx/0xcae60f97336094492664c4d31c170bbd17c25add3f78cba887d59b7771df8739) |
+
+## Test funds recycled before the run (second deployment, superseded)
+
+| What | Transaction |
+| --- | --- |
+| buyer sends MUSD to seller for the closes | [`0x8fce6c0d…adc2d7`](https://explorer.test.mezo.org/tx/0x8fce6c0db7c8f362e152625bfdf0ef25fd38b4f637606cf69dd231feebadc2d7) |
+| seller approves MUSD for v2 vault #1 | [`0x78e65307…a43089`](https://explorer.test.mezo.org/tx/0x78e653073cc1b7f3cf4fc1acba987fff3fb8d011adc7d03646fdd9f51ea43089) |
+| seller closes v2 position #1 | [`0x2de0a53f…c2afad`](https://explorer.test.mezo.org/tx/0x2de0a53f2bf7ae2b775ef7663fece1947349ed7fc447a9718b0f14a635c2afad) |
+| seller approves MUSD for v2 vault #2 | [`0x56115aab…0da446`](https://explorer.test.mezo.org/tx/0x56115aab5b36147cb4bec0a56ff7af6e00ab28dcd8d77101574b10c1330da446) |
+| seller closes v2 position #2 | [`0x8d479cdf…604d32`](https://explorer.test.mezo.org/tx/0x8d479cdf33fb10af119cd6ffe454a95a8484436817ca15472642cc8b6a604d32) |
+| buyer claims the surplus of v2 position #3 (closed by a redemption) | [`0xbfd470a7…f1d005`](https://explorer.test.mezo.org/tx/0xbfd470a738a736845b21fc248d765c60d4decfd51e8f466da29c604fd2f1d005) |
+
+---
+
+# Second deployment: live run (superseded by v3)
 
 Run with `scripts/e2e.mjs` against the contracts in `deployments.json` (london build, public rescue under 120%, floor 80%).
 Two wallets: seller `0x522bC0c3919fF823173ca4145feEcE905F772ffE`, buyer `0xeF05aCAdf5d3fF7e8E5F0BE2515F2BE351e225A6`. Raw data: `docs/e2e-results.json`.
@@ -119,7 +230,7 @@ A second `init` reverts with `AlreadyInitialized` (`0x0dc149f0`), a stranger wit
 | ok | seller claims the auction payout | `0xef72fa3f1ff94c561346a79761e2a685ce5b3feb6f8c599f3bd630715f284bff` |
 
 
-# Second deployment: browser pass
+# Second deployment: browser pass (superseded by v3)
 
 A real Chrome drove the production build (served with the second deployment's addresses) through every route and action,
 same bridge as before: the page gets a plain EIP-1193 provider and every signature happens in the Node test process.

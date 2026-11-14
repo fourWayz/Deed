@@ -1,0 +1,9 @@
+{
+  "installCommand": "npm ci --omit=dev",
+  "functions": { "api/index.js": { "maxDuration": 10 } },
+  "rewrites": [
+    { "source": "/positions/:id", "destination": "/api/index?route=positions&id=:id" },
+    { "source": "/:route(positions|listings|auctions|activity|stats|health)", "destination": "/api/index?route=:route" },
+    { "source": "/", "destination": "/api/index?route=health" }
+  ]
+}
