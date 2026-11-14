@@ -51,6 +51,44 @@ export function Ticker({ value, format, from, ms = 380 }: { value: number; forma
   return <span ref={ref}>{format(from ?? value)}</span>;
 }
 
+/**
+ * Counts a bigint up to its value (from 0 the first time, from the previous value after that). The last frame is always
+ * the exact value, and with reduced motion there is no counting at all.
+ */
+export function CountUp({ value, format }: { value: bigint; format: (b: bigint) => string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const last = useRef<bigint | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const from = last.current ?? 0n;
+    last.current = value;
+    if (reducedMotion() || from === value) {
+      el.textContent = format(value);
+      return;
+    }
+    const st = { f: 0 };
+    const a = animate(st, {
+      f: 1,
+      duration: 380,
+      ease: "outCubic",
+      onUpdate: () => {
+        el.textContent = format(from + ((value - from) * BigInt(Math.round(st.f * 1e6))) / 1000000n);
+      },
+      onComplete: () => {
+        el.textContent = format(value);
+      },
+    });
+    return () => {
+      a.pause();
+      el.textContent = format(value);
+    };
+    // format is a stable function in callers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return <span ref={ref}>{format(0n)}</span>;
+}
+
 export function Stat({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="stat">

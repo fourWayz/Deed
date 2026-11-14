@@ -3,10 +3,10 @@
 import { deployed } from "@/lib/config";
 import { usePositions, useNow } from "@/lib/usePositions";
 import { auctionPriceAt, type Position } from "@/lib/positions";
-import { fmt, fmtDuration, fmtMUSD, fmtPct } from "@/lib/format";
+import { fmt, fmtClock, fmtMUSD, fmtPct } from "@/lib/format";
 import { PositionCard } from "@/components/PositionCard";
 import { BidButton, StartRescueButton } from "@/components/Actions";
-import { ErrorBox, NotDeployed, Reveal, Skeletons, Stat, Ticker } from "@/components/ui";
+import { Empty, ErrorBox, NotDeployed, Reveal, Skeletons, Stat, Ticker } from "@/components/ui";
 import { PRICE_SOURCE_MESSAGE } from "@/lib/priceSource";
 
 function AuctionBody({
@@ -29,19 +29,34 @@ function AuctionBody({
   const elapsed = Math.min(1, Math.max(0, (now - Number(a.start)) / Number(a.duration)));
   return (
     <>
-      <div className="muted" style={{ fontSize: 12.5 }}>
-        Current price
+      <div className="auction-price">
+        <div>
+          <div className="muted" style={{ fontSize: "var(--fs-sm)", fontWeight: 600 }}>
+            Current price
+          </div>
+          <div className="big price-tick">
+            <Ticker value={Number(price) / 1e18} format={(n) => `${fmt(BigInt(Math.round(n * 1e6)) * 10n ** 12n, 2)} MUSD`} />
+          </div>
+        </div>
+        <div className="countdown" style={{ textAlign: "right" }}>
+          <small>Time left</small>
+          {left > 0 ? fmtClock(left) : "ended"}
+        </div>
       </div>
-      <div className="big">
-        <Ticker value={Number(price) / 1e18} format={(n) => `${fmt(BigInt(Math.round(n * 1e6)) * 10n ** 12n, 2)} MUSD`} />
-      </div>
-      <div className="bar" style={{ margin: "10px 0" }}>
+      <div
+        className="bar"
+        style={{ margin: "10px 0" }}
+        role="progressbar"
+        aria-label="Time left in the auction"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round((1 - elapsed) * 100)}
+      >
         <div style={{ width: `${(1 - elapsed) * 100}%` }} />
       </div>
       <div className="stats" style={{ marginTop: 0 }}>
         <Stat k="Starts at" v={fmtMUSD(a.startPrice)} />
         <Stat k="Floor" v={fmtMUSD(a.floorPrice)} />
-        <Stat k="Time left" v={left > 0 ? fmtDuration(left) : "ended"} />
         <Stat k="Winner leaves ICR ≥" v={fmtPct(safeICR)} />
       </div>
       {left > 0 ? (
@@ -79,7 +94,11 @@ export default function Rescue() {
       {data && (
         <div className="stack" style={{ gap: 22 }}>
           <h2>Live auctions</h2>
-          {live.length === 0 && <div className="glass empty">No auctions are running.</div>}
+          {live.length === 0 && (
+            <Empty art="rescue" title="No auctions are running">
+              When a position falls under the rescue line and someone starts an auction, it shows up here with a falling price.
+            </Empty>
+          )}
           <Reveal className="grid">
             {live.map((p) => (
               <PositionCard key={p.id.toString()} p={p} rescueICR={data.rescueICR}>
@@ -89,7 +108,11 @@ export default function Rescue() {
           </Reveal>
 
           <h2>At risk (ICR under {fmtPct(data.rescueICR)})</h2>
-          {atRisk.length === 0 && <div className="glass empty">No position is under the rescue line.</div>}
+          {atRisk.length === 0 && (
+            <Empty art="rescue" title="No position is under the rescue line">
+              Every open position is currently above {fmtPct(data.rescueICR)}.
+            </Empty>
+          )}
           <Reveal className="grid">
             {atRisk.map((p) => (
               <PositionCard key={p.id.toString()} p={p} rescueICR={data.rescueICR}>

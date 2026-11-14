@@ -39,6 +39,27 @@ export function fmtDuration(totalSeconds: number): string {
   return `${s}s`;
 }
 
+/** Fixed-width clock for a countdown (02:14:05), so the digits do not jitter as it ticks. */
+export function fmtClock(totalSeconds: number): string {
+  const t = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(t % 60)}`;
+}
+
+/** Time left in the two biggest units that matter: "3d 4h", "5h 12m", "42s". */
+export function fmtLeft(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "0s";
+  const d = Math.floor(totalSeconds / 86400);
+  const h = Math.floor((totalSeconds % 86400) / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${Math.floor(totalSeconds % 60)}s`;
+  return `${Math.floor(totalSeconds)}s`;
+}
+
 const FRIENDLY: Record<string, string> = {
   SnapshotMismatch: "The position changed since you looked at it. Refresh and check the new numbers before buying.",
   Expired: "This listing or auction has ended.",

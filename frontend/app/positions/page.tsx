@@ -10,7 +10,7 @@ import { useTx } from "@/lib/useTx";
 import { useSafeWrite } from "@/lib/useSafeWrite";
 import { PositionCard } from "@/components/PositionCard";
 import { CreatePosition } from "@/components/Actions";
-import { ErrorBox, NotDeployed, Reveal, Skeletons, TxButton } from "@/components/ui";
+import { Empty, ErrorBox, NotDeployed, Reveal, Skeletons, TxButton } from "@/components/ui";
 
 function Proceeds({ address }: { address: `0x${string}` }) {
   const client = usePublicClient() as PublicClient;
@@ -36,7 +36,7 @@ function Proceeds({ address }: { address: `0x${string}` }) {
     <div className="glass row" style={{ marginBottom: 18, flexWrap: "wrap" }}>
       <div>
         <b>Sale proceeds waiting</b>
-        <div className="muted" style={{ fontSize: 13 }}>
+        <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
           Payments are pulled, nothing is sent until you claim.
         </div>
       </div>
@@ -75,7 +75,11 @@ export default function MyPositions() {
       </p>
 
       {!deployed && <NotDeployed />}
-      {deployed && !isConnected && <div className="notice">Connect a wallet to open or manage positions.</div>}
+      {deployed && !isConnected && (
+        <Empty art="wallet" title="No wallet connected">
+          Connect a wallet to open or manage positions. You can still browse the market and the activity without one.
+        </Empty>
+      )}
       {isConnected && address && <Proceeds address={address} />}
 
       {deployed && (
@@ -84,7 +88,11 @@ export default function MyPositions() {
           <h2 style={{ marginTop: 10 }}>Your Deeds</h2>
           {isLoading && <Skeletons />}
           {error && <ErrorBox error={error} retry={() => refetch()} />}
-          {data && mine.length === 0 && isConnected && <div className="glass empty">No positions yet. Open one above.</div>}
+          {data && mine.length === 0 && isConnected && (
+            <Empty art="list" title="No positions yet">
+              No positions yet. Open one above and it shows up here.
+            </Empty>
+          )}
           {data && (
             <Reveal className="grid">
               {mine.map((p) => (

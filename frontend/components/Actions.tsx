@@ -23,6 +23,9 @@ function useWallet() {
   return { address, client, write };
 }
 
+const LOCKED = "Frozen while the Deed is listed or in a rescue auction.";
+const NEED_AMOUNT = "Enter an amount above first.";
+
 // --- open a position ---
 
 export function CreatePosition({ price, onDone }: { price: bigint | null; onDone: () => void }) {
@@ -52,15 +55,18 @@ export function CreatePosition({ price, onDone }: { price: bigint | null; onDone
           <input value={debt} onChange={(e) => setDebt(e.target.value)} inputMode="decimal" />
         </div>
       </div>
-      <div className="muted" style={{ fontSize: 13 }}>
+      <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
         Resulting ICR <b>{fmtPct(icr)}</b>
-        {tooLow && <span style={{ color: "var(--bad)" }}> — under 110%, this would revert</span>}
-        {belowMin && <span style={{ color: "var(--bad)" }}> — under the minimum debt</span>}
+        {tooLow && <span style={{ color: "var(--bad-ink)" }}> — under 110%, this would revert</span>}
+        {belowMin && <span style={{ color: "var(--bad-ink)" }}> — under the minimum debt</span>}
       </div>
       <TxButton
         label="Open position"
         state={state}
         disabled={!address || !coll || !borrow || tooLow || belowMin}
+        why={
+          !address ? "Connect a wallet to open a position." : !coll || !borrow ? "Enter the collateral and the amount to borrow." : belowMin ? "Mezo's minimum debt is 1,800 MUSD." : tooLow ? "That would leave the position under 110% ICR." : undefined
+        }
         onClick={() =>
           run(async () => {
             const hints = await getHints(client, coll!, total!);
@@ -93,6 +99,7 @@ export function BuyButton({ p, onDone }: { p: Position; onDone: () => void }) {
       label={`Buy for ${fmtMUSD(l.price)}`}
       state={state}
       disabled={!address || expired || l.seller === address}
+      why={!address ? "Connect a wallet to buy." : expired ? "This listing has expired." : l.seller === address ? "This is your own listing." : undefined}
       onClick={() =>
         run(async (wait) => {
           await ensureAllowance(client, (a) => write(a), address!, ADDR.market, l.price, wait);
@@ -136,6 +143,7 @@ export function BidButton({
       label="Bid at current price"
       state={state}
       disabled={!address || a.seller === address || paused}
+      why={!address ? "Connect a wallet to bid." : a.seller === address ? "You are the seller of this position." : paused ? "Paused while the DEX price and the oracle disagree." : undefined}
       onClick={() =>
         run(async (wait) => {
           const price = auctionPriceAt(a, Math.floor(Date.now() / 1000));
@@ -172,6 +180,7 @@ export function StartRescueButton({ p, paused, onDone }: { p: Position; paused?:
       variant="ghost"
       state={state}
       disabled={!address || paused}
+      why={!address ? "Connect a wallet to start a rescue." : paused ? "Paused while the DEX price and the oracle disagree." : undefined}
       onClick={() =>
         run(() => write({ address: ADDR.auction, abi: auctionAbi, functionName: "startRescue", args: [p.id] }))
       }
@@ -237,6 +246,7 @@ export function ManagePanel({
           variant="ghost"
           state={claim.state}
           disabled={amt0 === 0n}
+          why="Mezo is holding nothing for this position."
           onClick={() => claim.run(() => write({ address: p.vault, abi: vaultAbi, functionName: "claimSurplus" }))}
         />
       </div>
@@ -278,6 +288,7 @@ export function ManagePanel({
             label="Add collateral"
             state={add.state}
             disabled={locked || !amt}
+            why={locked ? LOCKED : NEED_AMOUNT}
             onClick={() => add.run(() => vaultCall("addCollateral"))}
           />
           <TxButton
@@ -285,6 +296,7 @@ export function ManagePanel({
             variant="ghost"
             state={withdraw.state}
             disabled={locked || !amt || blocked.withdraw}
+            why={locked ? LOCKED : blocked.withdraw ? "Mezo switches withdrawals off in Recovery Mode." : NEED_AMOUNT}
             onClick={() => withdraw.run(() => vaultCall("withdraw"))}
           />
           <TxButton
@@ -292,6 +304,7 @@ export function ManagePanel({
             variant="ghost"
             state={repay.state}
             disabled={locked || !amt}
+            why={locked ? LOCKED : NEED_AMOUNT}
             onClick={() =>
               repay.run(async (wait) => {
                 const hints = await getHints(client, p.collateral, p.principal - amt!);
@@ -310,6 +323,7 @@ export function ManagePanel({
             variant="danger"
             state={close.state}
             disabled={locked || blocked.close}
+            why={locked ? LOCKED : "Mezo switches closing off in Recovery Mode."}
             onClick={() =>
               close.run(async (wait) => {
                 // repay everything except the 200 MUSD gas compensation, plus a little for interest
@@ -320,7 +334,7 @@ export function ManagePanel({
             }
           />
         </div>
-        <div className="muted" style={{ fontSize: 12.5 }}>
+        <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
           Closing needs {fmtMUSD(p.debt - GAS_COMP)} in your wallet. Collateral now {fmtBTC(p.collateral)}.
         </div>
         {(blocked.withdraw || blocked.close) && (
@@ -361,6 +375,7 @@ export function ManagePanel({
               label="Start auction"
               state={auction.state}
               disabled={locked || !auctionInputsOk}
+              why={locked ? LOCKED : "The floor must be within its limits and the duration 1 to 168 hours."}
               onClick={() =>
                 auction.run(() =>
                   write({
@@ -373,10 +388,10 @@ export function ManagePanel({
               }
             />
           )}
-          <div className="muted" style={{ fontSize: 12.5 }}>
+          <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
             The winner pays MUSD to you and tops the position up to {fmtPct(safeICR)} or more.
             {!auctionInputsOk && (
-              <span style={{ color: "var(--bad)" }}>
+              <span style={{ color: "var(--bad-ink)" }}>
                 {" "}
                 Floor must be {minFloorPct} to 100 and the duration 1 to 168 hours.
               </span>
@@ -425,7 +440,7 @@ export function ListForm({ p, locked, price, onDone }: { p: Position; locked: bo
       </div>
       <FeeLine price={parsed} quote={fee} role="seller" />
       {!minOk && (
-        <div className="muted" style={{ fontSize: 12.5, color: "var(--bad)" }}>
+        <div className="muted" style={{ fontSize: "var(--fs-sm)", color: "var(--bad-ink)" }}>
           Promised ICR must be at least 110%{icrNow !== null && ` and no more than the position has now (${icrNow.toFixed(1)}%)`}.
         </div>
       )}
@@ -441,6 +456,7 @@ export function ListForm({ p, locked, price, onDone }: { p: Position; locked: bo
           label="List for sale"
           state={list.state}
           disabled={locked || !parsed || !minOk || !daysOk}
+          why={locked ? LOCKED : !parsed ? "Enter the price you want." : !minOk ? "The promised ICR is outside its limits, see the note above." : "Listing length must be 1 to 365 days."}
           onClick={() =>
             list.run(() => {
               const expiry = BigInt(Math.floor(Date.now() / 1000) + Math.round(daysNum * 86400));
@@ -450,7 +466,7 @@ export function ListForm({ p, locked, price, onDone }: { p: Position; locked: bo
           }
         />
       )}
-      <div className="muted" style={{ fontSize: 12.5 }}>
+      <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
         Listing freezes the vault. Buyers are protected by a snapshot of the position.
       </div>
     </div>
@@ -499,11 +515,11 @@ export function BorrowPanel({
         <label>Borrow more (MUSD)</label>
         <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0.0" />
       </div>
-      <div className="muted" style={{ fontSize: 13 }}>
+      <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
         {fee !== null && newIcr !== null ? (
           <>
             Borrowing fee {fmtMUSD(fee)} is added to your debt. ICR after: <b>{fmtPct(newIcr)}</b>
-            {newIcr < MCR && <span style={{ color: "var(--bad)" }}> — under 110%, this would revert</span>}
+            {newIcr < MCR && <span style={{ color: "var(--bad-ink)" }}> — under 110%, this would revert</span>}
           </>
         ) : (
           "Enter an amount to preview the fee and the new ICR."
@@ -514,6 +530,7 @@ export function BorrowPanel({
           label="Borrow"
           state={borrow.state}
           disabled={locked || blockedBorrow || !address || !amt || (newIcr !== null && newIcr < MCR)}
+          why={locked ? LOCKED : blockedBorrow ? "Mezo switches borrowing off in Recovery Mode." : !address ? "Connect a wallet first." : !amt ? "Enter an amount to borrow." : "That would leave the position under 110% ICR."}
           onClick={() =>
             borrow.run(async () => {
               const hints = await getHints(client, p.collateral, p.principal + amt!);
@@ -526,6 +543,7 @@ export function BorrowPanel({
           variant="ghost"
           state={refi.state}
           disabled={locked || blockedRefinance || !address}
+          why={locked ? LOCKED : blockedRefinance ? "Mezo switches refinancing off in Recovery Mode." : "Connect a wallet first."}
           onClick={() =>
             refi.run(async () => {
               const hints = await getHints(client, p.collateral, p.principal);
@@ -535,7 +553,7 @@ export function BorrowPanel({
         />
       </div>
       {(blockedBorrow || blockedRefinance) && <BlockedNote />}
-      <div className="muted" style={{ fontSize: 12.5 }}>
+      <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
         The borrowed MUSD goes to your wallet. Refinancing moves the position to today's interest rate; Mezo charges a fee that is
         added to the debt. Your rate now: {fmtRate(p.rate)}.
       </div>
