@@ -171,6 +171,15 @@ cd frontend && npm test                    # price source range check
 ## Limitations
 
 - Not audited.
+- **Redemption can beat a rescue.** Observed on testnet three times: a position that had just become the lowest-ICR trove was
+  redeemed in full within a few blocks, before a rescue auction could run. Deed #3 was opened at 110.89% and redeemed in
+  `0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec`, 2 blocks after the open (block 16737789 to 16737791).
+  Deed #5 was withdrawn to 117% in block 16757667 and redeemed in `0x6571a3bc16550cfdb58e196751c8f83d7621f10dabdb646ba47bc24db19a0cc3`
+  (block 16757670). Deed #6 was withdrawn to 117% in block 16758318 and redeemed in
+  `0x7731a6138212cf50933c4acf21d93d6af501ef0c6ad4f95d45c5d0469f9a1863` (block 16758322). Hashes and context: `docs/demo.md`
+  (v3 run) and `docs/ui-pass-v3.md`. The redeemer is not identified here. A fourth position at 117% (Deed #4) was not redeemed, so
+  this is not constant. The holder keeps the surplus and claims it through the vault, but the rescue never starts. Not fixed.
+  See the roadmap.
 - The snapshot hashes the principal, not total debt. Total debt changes every second through interest, so it would
   never match. Interest is covered by the minimum ICR check.
 - A partial redemption against a listed trove makes `buy` revert until the listing is cancelled and relisted.
@@ -186,3 +195,8 @@ cd frontend && npm test                    # price source range check
   a wallet that estimates on its own can still hit this.
 - The wallet list is Passport's defaults plus an injected-wallet entry. WalletConnect needs a real project id in
   `NEXT_PUBLIC_WC_PROJECT_ID`. Extension wallets (MetaMask, Unisat, OKX, Xverse) were not tested.
+
+## Roadmap
+
+- **Redemption-queue-aware rescue.** Take a position's place in Mezo's redemption order into account when starting a rescue,
+  so a position that is about to be the lowest-ICR trove is not left to be redeemed first. Not designed or built.

@@ -118,6 +118,14 @@ What this does and does not protect against:
 - Positions with a liquidated trove cannot be sold or auctioned. Surplus collateral is claimed from the vault.
 - The vault does not expose `refinance`, so a position keeps the interest rate it was opened with.
 - Hints are supplied by the caller. Bad hints cost gas or fail, they do not break accounting.
+- **Redemption can happen before a rescue.** Observed on testnet three times: a position that had just become the
+  lowest-ICR trove was redeemed in full within a few blocks, before a rescue auction could run. Deed #3 (opened at 110.89%):
+  `0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec`, 2 blocks after the open. Deed #5 (withdrawn to 117% in
+  block 16757667): `0x6571a3bc16550cfdb58e196751c8f83d7621f10dabdb646ba47bc24db19a0cc3`, block 16757670. Deed #6 (withdrawn
+  to 117% in block 16758318): `0x7731a6138212cf50933c4acf21d93d6af501ef0c6ad4f95d45c5d0469f9a1863`, block 16758322. Sources:
+  `docs/demo.md` (v3 run) and `docs/ui-pass-v3.md`. We do not know who sent them. Deed #4 at 117% was not redeemed, so it
+  is not constant. The vault holds up: the holder claimed the surplus through `claimCollateral` each time. What is lost is the
+  rescue. Nothing in the contracts orders a rescue ahead of a redemption. Planned: redemption-queue-aware rescue (README roadmap).
 - Contracts are not audited.
 
 ## Review findings
@@ -135,6 +143,7 @@ A manual adversarial pass over every contract, backed by `test/Adversarial.t.sol
 | 6 | `DeedNFT.init` accepts zero or equal venue addresses. | Info | Deployer only, one call. The deploy script passes the three real addresses. |
 | 7 | `closeTrove` reverts in Mezo Recovery Mode, so a holder cannot exit through the vault then. | Info | Protocol rule, noted in `docs/mezo-notes.md`. Topping up and selling still work. |
 | 8 | Source code is not verified on the Mezo explorer. | Info | Explorer verifier rejected the submissions, see README. |
+| 9 | A position that becomes the lowest-ICR trove can be redeemed within a few blocks, before a rescue auction can run. Seen three times on testnet (see Known limitations for hashes). | Medium for rescue, no fund loss seen | Open. The holder claims the surplus. Redemption-queue-aware rescue is on the roadmap. |
 
 Properties attacked and found to hold: a stale MUSD allowance from a previous owner cannot be spent by the next one; a bid
 sent after the owner cancels reverts and costs the bidder nothing; once an auction ends the venue hook and the lock are gone;
