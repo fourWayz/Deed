@@ -5,36 +5,46 @@ close it, and if a position is drifting toward liquidation nobody can step in an
 its own vault and makes control of that vault an NFT, so the position itself can be sold, and a risky one can be handed
 to someone who will rescue it.
 
-- **Track:** Mezo Buildathon, Mezo testnet (chain id 31611). TODO: exact track name from the AKINDO listing.
+- **Track:** DeFi: borrowing. Mezo Buildathon, Mezo testnet (chain id 31611).
 - **Who it is for:**
   - Borrowers who want to cash out of a healthy MUSD position without closing it, or get out of a risky one for a fair price.
   - Buyers who want an existing position (its BTC and its debt) instead of opening a new one.
   - Rescuers who want to take on a position close to liquidation, add BTC and keep the spread.
-  - Builders who want a position feed and an SDK to build on (Wave 2, see below).
+  - Builders who want a position feed (the indexer API, live) and, later, an SDK.
 
 ## What is new in Wave 2
 
-Wave 1 is deployed and tested (see the address table and [docs/demo.md](docs/demo.md)). Wave 2 is being built on
-separate branches and **none of it is deployed yet**, so nothing below is claimed as live.
+The third deployment (v3) is live on Mezo testnet. Addresses and Sourcify links are in the table below, the transactions of a
+full run are in [docs/demo.md](docs/demo.md) (section "Live run on the third deployment").
 
-| Piece | Branch | State today |
+| Piece | State | Evidence |
 | --- | --- | --- |
-| Capped fee on sales and rescues, paid to an immutable treasury (cap 1%, no owner, no way to change it) | `feat/contracts-v3` | Written in the working tree, uncommitted. Not deployed. TODO: fee value chosen at deploy, tests, deployment tx. |
-| Time-weighted DEX price guard (`PairTwapPrice`) and a read-only `DeedLens` contract | `feat/contracts-v3` | Files exist, uncommitted. Not deployed. TODO: tests, deployment tx. |
-| Indexer for positions, listings, auctions and fees | `feat/indexer` | ABIs and config only, no data. TODO: running indexer, URL, numbers. |
-| Keeper that starts rescues and ends expired auctions | `feat/keeper` | TODO: nothing committed yet. |
-| SDK and MCP server | `feat/sdk-mcp` | TODO: nothing committed yet. |
-| Frontend v2 | `feat/frontend-v2` | TODO: nothing committed yet. |
+| Fee of 0.5% on market sales and on rescue wins (the contracts cap it at 1%), paid to an immutable treasury | Deployed in v3 | 100 MUSD sale: seller 99.5, treasury 0.5. Rescue: 538.022 MUSD paid = seller 535.332 + fee 2.690 (v3 run in `docs/demo.md`). Tests in `test/Fees.t.sol` and `test/invariant/FeeInvariants.t.sol` |
+| Time weighted price guard (`PairTwapPrice`, 1 hour window) | Deployed in v3. Testnet limit is 2000 bps (20%), the mainnet default is 200 bps | Rescue started and won under it (v3 run). Why the testnet limit is wide: [docs/security.md](docs/security.md) |
+| `DeedLens`, a read-only contract with a position's entire debt, ICR, equity, surplus and Recovery Mode | Deployed in v3 | `test/Lens.t.sol` |
+| `borrow`, `refinance`, close with the entire debt and `claimSurplus` through the vault | Deployed in v3 | v3 run in `docs/demo.md` |
+| Indexer (positions, listings, auctions, activity, stats) | Live at [deed-lovat.vercel.app](https://deed-lovat.vercel.app), source in [`indexer/`](indexer/README.md) | Pages matched its `/stats` in the v3 browser pass, see [docs/ui-pass-v3.md](docs/ui-pass-v3.md). Its sync stalled for about 4.5 hours during that pass, details there |
+| Frontend v2 on v3 | On branch `feat/frontend-v2`, not merged here. The frontend on this branch is configured for the v2 contracts | Browser pass: [docs/ui-pass-v3.md](docs/ui-pass-v3.md). The Vercel preview of it was not deployed |
+| Keeper, SDK and MCP server | TODO: not in this branch | none |
 
-How the fee would work and why it is capped: [docs/business-model.md](docs/business-model.md).
+How the fee works and why it is capped: [docs/business-model.md](docs/business-model.md).
+
+### Testnet activity from the team's test wallets
+
+This is not usage and not revenue. Every wallet that has touched the contracts is ours (2 unique wallets). From the indexer's
+`/stats`, all deployments together, at the start of the release candidate pass on 13 Nov 2026 ([docs/ui-pass-v3.md](docs/ui-pass-v3.md)):
+7 positions, 12 listings, 4 sales, 5 auctions started, 4 rescues, volume 3126.730579642058144555 MUSD, fees 6.187563853191175201 MUSD.
+The fees went to the testnet treasury, which is the deployer wallet. The indexer then stalled, and a chain scan later in that pass
+read 9 positions, volume 3226.73 and fees 6.6876.
 
 ## Live links
 
-- Live app: [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app) (Wave 1 contracts)
+- Live app: [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app). The frontend on this branch is configured
+  for the v2 contracts, so this app is the v2 version unless it was redeployed from `feat/frontend-v2`. TODO: confirm which deployment it runs.
+- Indexer API: [deed-lovat.vercel.app](https://deed-lovat.vercel.app) (`/stats`, `/activity`, `/positions`, `/listings`, `/auctions`, `/health`)
 - Code: [github.com/fourWayz/Deed](https://github.com/fourWayz/Deed)
 - Explorer: [explorer.test.mezo.org](https://explorer.test.mezo.org/)
 - Demo video: TODO
-- Indexer / API: TODO
 - Pitch outline, video script, submission text: [docs/pitch-outline.md](docs/pitch-outline.md),
   [docs/video-script.md](docs/video-script.md), [docs/submission-wave2.md](docs/submission-wave2.md)
 
@@ -54,6 +64,7 @@ included, built for the london EVM. Deploy transactions: [docs/demo.md](docs/dem
 
 Fees: 0.5% of the sale price on `DeedMarket` and 0.5% of the winning price on `RescueAuction`, both constructor values
 (capped at 1% by the contracts), paid to the immutable treasury `0x4989CC7150a869D6b07540B54B96fD02c5e0537c` with `claim()`.
+On testnet the treasury is the deployer wallet. A multisig is planned for mainnet.
 The ABIs are in [`abis/`](abis) and described in [docs/interfaces.md](docs/interfaces.md).
 
 The DEX guard is a time weighted price (1 hour window) from the live Tigris MUSD/BTC volatile pool
@@ -71,7 +82,7 @@ Earlier deployments are still on chain and are superseded, do not use them. The 
 2. **Open a position.** On My Positions, open one, for example 0.04 BTC against 1,800 MUSD.
 3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
    auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
-   full live run (`node --env-file=.env scripts/e2e.mjs` repeats it).
+   full live run (`node --env-file=.env scripts/e2e-v3.mjs` repeats the v3 run).
 
 Run the frontend locally: `cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the
 contract addresses are already filled in), then `npm install && npm run dev`. Run the contract tests: see
@@ -201,9 +212,8 @@ cd frontend && npm test                    # price source range check
 - The DEX guard limit on this testnet deployment is 20%, wider than the 200 bps target, because the testnet pool is far from the
   oracle (see Safety rules). It is fixed at deploy.
 - The fee applies only to venue sales, a Deed can still be handed over with a plain ERC-721 transfer.
-- A testnet redemption bot closed the lowest-ICR positions of both the second and third deployments within blocks, see
-  [docs/demo.md](docs/demo.md).
-- The frontend lists the latest 60 Deeds by reading the chain directly, there is no indexer.
+- The frontend on this branch lists the latest 60 Deeds by reading the chain directly. The indexer in `indexer/` is separate, and
+  the frontend that uses it is on `feat/frontend-v2`.
 - Mezo's testnet RPC sometimes returns the bare 21k base cost from `eth_estimateGas` (reproduce with `scripts/estimate-probe.mjs`).
   A wallet that trusts it sends transactions that run out of gas. The app simulates first and sets its own gas limit, but
   a wallet that estimates on its own can still hit this.
