@@ -1,25 +1,52 @@
 # Deed
 
-A Mezo MUSD loan is stuck to the wallet that opened it, so you can't sell a healthy position or hand a risky one to
-someone who will rescue it. Deed puts each loan in its own vault and makes control of that vault an NFT you can sell.
+A Mezo MUSD loan is stuck to the wallet that opened it. If you want out of a healthy position you have to repay it and
+close it, and if a position is drifting toward liquidation nobody can step in and save it for you. Deed puts each loan in
+its own vault and makes control of that vault an NFT, so the position itself can be sold, and a risky one can be handed
+to someone who will rescue it.
 
-**Live demo:** [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app)
+- **Track:** DeFi: borrowing. Mezo Buildathon, Mezo testnet (chain id 31611).
+- **Who it is for:**
+  - Borrowers who want to cash out of a healthy MUSD position without closing it, or get out of a risky one for a fair price.
+  - Buyers who want an existing position (its BTC and its debt) instead of opening a new one.
+  - Rescuers who want to take on a position close to liquidation, add BTC and keep the spread.
+  - Builders who want a position feed (the indexer API, live) and, later, an SDK.
 
-Built for the Mezo Buildathon. Mezo testnet, chain id 31611.
+## What is new in Wave 2
 
-## Try it in 3 steps
+The third deployment (v3) is live on Mezo testnet. Addresses and Sourcify links are in the table below, the transactions of a
+full run are in [docs/demo.md](docs/demo.md) (section "Live run on the third deployment").
 
-1. **Open the live app and connect.** Go to https://frontend-iota-blush-70.vercel.app and connect a wallet on Mezo
-   testnet (chain id 31611) with test BTC from the [Mezo faucet](https://faucet.test.mezo.org/).
-2. **Open a position.** On My Positions, open one, for example 0.04 BTC against 1,800 MUSD.
-3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
-   auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
-   full live run (`node --env-file=.env scripts/e2e.mjs` repeats it).
+| Piece | State | Evidence |
+| --- | --- | --- |
+| Fee of 0.5% on market sales and on rescue wins (the contracts cap it at 1%), paid to an immutable treasury | Deployed in v3 | 100 MUSD sale: seller 99.5, treasury 0.5. Rescue: 538.022 MUSD paid = seller 535.332 + fee 2.690 (v3 run in `docs/demo.md`). Tests in `test/Fees.t.sol` and `test/invariant/FeeInvariants.t.sol` |
+| Time weighted price guard (`PairTwapPrice`, 1 hour window) | Deployed in v3. Testnet limit is 2000 bps (20%), the mainnet default is 200 bps | Rescue started and won under it (v3 run). Why the testnet limit is wide: [docs/security.md](docs/security.md) |
+| `DeedLens`, a read-only contract with a position's entire debt, ICR, equity, surplus and Recovery Mode | Deployed in v3 | `test/Lens.t.sol` |
+| `borrow`, `refinance`, close with the entire debt and `claimSurplus` through the vault | Deployed in v3 | v3 run in `docs/demo.md` |
+| Indexer (positions, listings, auctions, activity, stats) | Live at [deed-lovat.vercel.app](https://deed-lovat.vercel.app), source in [`indexer/`](indexer/README.md) | Pages matched its `/stats` in the v3 browser pass, see [docs/ui-pass-v3.md](docs/ui-pass-v3.md). Its sync stalled for about 4.5 hours during that pass, details there |
+| Frontend v2 on v3 | On branch `feat/frontend-v2`, not merged here. The frontend on this branch is configured for the v2 contracts | Browser pass: [docs/ui-pass-v3.md](docs/ui-pass-v3.md). The Vercel preview of it was not deployed |
+| Keeper, SDK and MCP server | TODO: not in this branch | none |
 
-### Run locally
+How the fee works and why it is capped: [docs/business-model.md](docs/business-model.md).
 
-`cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the contract addresses are
-already filled in), then `npm install && npm run dev`.
+### Testnet activity from the team's test wallets
+
+This is not usage and not revenue. Every wallet that has touched the contracts is ours (2 unique wallets). From the indexer's
+`/stats`, all deployments together, at the start of the release candidate pass on 13 Nov 2026 ([docs/ui-pass-v3.md](docs/ui-pass-v3.md)):
+7 positions, 12 listings, 4 sales, 5 auctions started, 4 rescues, volume 3126.730579642058144555 MUSD, fees 6.187563853191175201 MUSD.
+The fees went to the testnet treasury, which is the deployer wallet. The indexer then stalled, and a chain scan later in that pass
+read 9 positions, volume 3226.73 and fees 6.6876.
+
+## Live links
+
+- Live app: [frontend-iota-blush-70.vercel.app](https://frontend-iota-blush-70.vercel.app). The frontend on this branch is configured
+  for the v2 contracts, so this app is the v2 version unless it was redeployed from `feat/frontend-v2`. TODO: confirm which deployment it runs.
+- Indexer API: [deed-lovat.vercel.app](https://deed-lovat.vercel.app) (`/stats`, `/activity`, `/positions`, `/listings`, `/auctions`, `/health`)
+- Code: [github.com/fourWayz/Deed](https://github.com/fourWayz/Deed)
+- Explorer: [explorer.test.mezo.org](https://explorer.test.mezo.org/)
+- Demo video: TODO
+- Pitch outline, video script, submission text: [docs/pitch-outline.md](docs/pitch-outline.md),
+  [docs/video-script.md](docs/video-script.md), [docs/submission-wave2.md](docs/submission-wave2.md)
 
 ## Deployed addresses
 
@@ -37,6 +64,7 @@ included, built for the london EVM. Deploy transactions: [docs/demo.md](docs/dem
 
 Fees: 0.5% of the sale price on `DeedMarket` and 0.5% of the winning price on `RescueAuction`, both constructor values
 (capped at 1% by the contracts), paid to the immutable treasury `0x4989CC7150a869D6b07540B54B96fD02c5e0537c` with `claim()`.
+On testnet the treasury is the deployer wallet. A multisig is planned for mainnet.
 The ABIs are in [`abis/`](abis) and described in [docs/interfaces.md](docs/interfaces.md).
 
 The DEX guard is a time weighted price (1 hour window) from the live Tigris MUSD/BTC volatile pool
@@ -46,6 +74,19 @@ TroveManager `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0`, PriceFeed `0x86bCF084
 
 Earlier deployments are still on chain and are superseded, do not use them. The second (v2) is marked `superseded` under
 `previousDeployments` in `deployments.json`, the first is in [docs/first-deployment/](docs/first-deployment/README.md).
+
+## Quick start
+
+1. **Open the live app and connect.** Go to https://frontend-iota-blush-70.vercel.app and connect a wallet on Mezo
+   testnet (chain id 31611) with test BTC from the [Mezo faucet](https://faucet.test.mezo.org/).
+2. **Open a position.** On My Positions, open one, for example 0.04 BTC against 1,800 MUSD.
+3. **Sell it.** List it for MUSD and buy it from a second wallet, or open one at about 117% ICR and start a rescue
+   auction from the Rescue page. [docs/demo.md](docs/demo.md) walks through both and holds the transaction hashes of a
+   full live run (`node --env-file=.env scripts/e2e-v3.mjs` repeats the v3 run).
+
+Run the frontend locally: `cd frontend && cp .env.example .env.local`, put your own WalletConnect project id in it (the
+contract addresses are already filled in), then `npm install && npm run dev`. Run the contract tests: see
+[Develop](#develop).
 
 ### Verification
 
@@ -145,6 +186,15 @@ cd frontend && npm test                    # price source range check
 ## Limitations
 
 - Not audited.
+- **Redemption can beat a rescue.** Observed on testnet three times: a position that had just become the lowest-ICR trove was
+  redeemed in full within a few blocks, before a rescue auction could run. Deed #3 was opened at 110.89% and redeemed in
+  `0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec`, 2 blocks after the open (block 16737789 to 16737791).
+  Deed #5 was withdrawn to 117% in block 16757667 and redeemed in `0x6571a3bc16550cfdb58e196751c8f83d7621f10dabdb646ba47bc24db19a0cc3`
+  (block 16757670). Deed #6 was withdrawn to 117% in block 16758318 and redeemed in
+  `0x7731a6138212cf50933c4acf21d93d6af501ef0c6ad4f95d45c5d0469f9a1863` (block 16758322). Hashes and context: `docs/demo.md`
+  (v3 run) and `docs/ui-pass-v3.md`. The redeemer is not identified here. A fourth position at 117% (Deed #4) was not redeemed, so
+  this is not constant. The holder keeps the surplus and claims it through the vault, but the rescue never starts. Not fixed.
+  See the roadmap.
 - The snapshot hashes the entire collateral and the entire principal (pending redistribution included), not total debt. Total
   debt changes every second through interest, so it would never match. Interest is covered by the minimum ICR check.
 - A redistribution after listing changes the snapshot, so `buy` reverts until the seller relists.
@@ -162,11 +212,15 @@ cd frontend && npm test                    # price source range check
 - The DEX guard limit on this testnet deployment is 20%, wider than the 200 bps target, because the testnet pool is far from the
   oracle (see Safety rules). It is fixed at deploy.
 - The fee applies only to venue sales, a Deed can still be handed over with a plain ERC-721 transfer.
-- A testnet redemption bot closed the lowest-ICR positions of both the second and third deployments within blocks, see
-  [docs/demo.md](docs/demo.md).
-- The frontend lists the latest 60 Deeds by reading the chain directly, there is no indexer.
+- The frontend on this branch lists the latest 60 Deeds by reading the chain directly. The indexer in `indexer/` is separate, and
+  the frontend that uses it is on `feat/frontend-v2`.
 - Mezo's testnet RPC sometimes returns the bare 21k base cost from `eth_estimateGas` (reproduce with `scripts/estimate-probe.mjs`).
   A wallet that trusts it sends transactions that run out of gas. The app simulates first and sets its own gas limit, but
   a wallet that estimates on its own can still hit this.
 - The wallet list is Passport's defaults plus an injected-wallet entry. WalletConnect needs a real project id in
   `NEXT_PUBLIC_WC_PROJECT_ID`. Extension wallets (MetaMask, Unisat, OKX, Xverse) were not tested.
+
+## Roadmap
+
+- **Redemption-queue-aware rescue.** Take a position's place in Mezo's redemption order into account when starting a rescue,
+  so a position that is about to be the lowest-ICR trove is not left to be redeemed first. Not designed or built.

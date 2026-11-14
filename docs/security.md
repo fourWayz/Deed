@@ -144,6 +144,14 @@ What this does and does not protect against:
   Adding collateral, repaying and selling still work.
 - The fee applies only to venue sales. Handing a Deed over with a plain ERC-721 transfer pays no fee.
 - Hints are supplied by the caller. Bad hints cost gas or fail, they do not break accounting.
+- **Redemption can happen before a rescue.** Observed on testnet three times: a position that had just become the
+  lowest-ICR trove was redeemed in full within a few blocks, before a rescue auction could run. Deed #3 (opened at 110.89%):
+  `0x69783574d2229eba5ad2444e1da5c43832688a00b227a9ba906d3afc3233f3ec`, 2 blocks after the open. Deed #5 (withdrawn to 117% in
+  block 16757667): `0x6571a3bc16550cfdb58e196751c8f83d7621f10dabdb646ba47bc24db19a0cc3`, block 16757670. Deed #6 (withdrawn
+  to 117% in block 16758318): `0x7731a6138212cf50933c4acf21d93d6af501ef0c6ad4f95d45c5d0469f9a1863`, block 16758322. Sources:
+  `docs/demo.md` (v3 run) and `docs/ui-pass-v3.md`. We do not know who sent them. Deed #4 at 117% was not redeemed, so it
+  is not constant. The vault holds up: the holder claimed the surplus through `claimCollateral` each time. What is lost is the
+  rescue. Nothing in the contracts orders a rescue ahead of a redemption. Planned: redemption-queue-aware rescue (README roadmap).
 - Contracts are not audited.
 
 ## Review findings
@@ -168,6 +176,7 @@ A manual adversarial pass over every contract, backed by `test/Adversarial.t.sol
 | 13 | New fee path: rounding, the cap, who gets paid, and whether anything can be stuck. | Medium if unguarded | Fee rounds down so `fee + proceeds == price` exactly; cap and non-zero treasury enforced in the constructors; balances are pull-based. `testFuzz_marketFeePlusProceedsEqualsPrice`, `testFuzz_auctionFeePlusProceedsEqualsPrice`, `test_marketFee_cannotBeDodgedByBuyingYourOwnListing`, `test_treasuryNeverClaiming_doesNotBlockTheSeller`, `test_noAdminFunctionsInTheInterfaces`, and the invariants `invariant_escrowEqualsClaimable`, `invariant_everyMusdIsAccountedFor`, `invariant_feesAreExactlyTheRuleAndNeverAboveOnePercent`. |
 | 14 | `DeedLens` reads the oracle, which reverts when stale, and could brick a screen. It is also new surface. | Low | It never reverts on a stale oracle (`priceStale`), has no payable function and no state. `test_staleOracleDoesNotBrickTheLens`, `test_lensCannotReceiveFunds`. |
 | 15 | The testnet DEX pool is far from the oracle, so a 200 bps guard cannot work on it. | Info, testnet only | Documented above: the testnet deploy uses a wider limit chosen from the measured gap, mainnet should use 200 or less. |
+| 16 | A position that becomes the lowest-ICR trove can be redeemed within a few blocks, before a rescue auction can run. Seen three times on testnet (see Known limitations for hashes). | Medium for rescue, no fund loss seen | Open. The holder claims the surplus. Redemption-queue-aware rescue is on the roadmap. |
 
 Properties attacked and found to hold: a stale MUSD allowance from a previous owner cannot be spent by the next one; a bid
 sent after the owner cancels reverts and costs the bidder nothing; once an auction ends the venue hook and the lock are gone;
