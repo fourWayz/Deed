@@ -155,7 +155,9 @@ a:not(.btn):not(.brand):not(.nav-link):not(.bn-link):not(.foot-link):hover {
   max-width: 1160px;
   margin: 0 auto;
   padding: 0 var(--s-5) var(--s-8);
-  min-height: 60vh;
+  /* tall enough that the footer starts below the fold, so it does not jump when a page's content arrives */
+  min-height: calc(100vh - 104px);
+  min-height: calc(100svh - 104px);
 }
 
 /* page transition: a short fade and rise when the route changes */
@@ -290,6 +292,10 @@ a:not(.btn):not(.brand):not(.nav-link):not(.bn-link):not(.foot-link):hover {
 }
 .net-pill.wrong i {
   background: var(--bad);
+}
+/* RainbowKit draws its own button at 40px, bring it up to a 44px target */
+.wallet-btn button {
+  min-height: 44px;
 }
 .wallet-slot {
   min-width: 150px;

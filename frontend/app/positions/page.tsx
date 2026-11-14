@@ -90,7 +90,7 @@ export default function MyPositions() {
           {error && <ErrorBox error={error} retry={() => refetch()} />}
           {data && mine.length === 0 && isConnected && (
             <Empty art="list" title="No positions yet">
-              No positions yet. Open one above and it shows up here.
+              Open one above and it shows up here.
             </Empty>
           )}
           {data && (

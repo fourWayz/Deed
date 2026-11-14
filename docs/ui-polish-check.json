@@ -1,0 +1,331 @@
+{
+  "base": "http://localhost:3111",
+  "simulated": true,
+  "results": [
+    {
+      "name": "no horizontal scroll at 390px on 9 routes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "390px: every button, chip, nav link and input is at least 44px each way (copy buttons extend theirs with a pseudo-element)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal scroll at 768px on 9 routes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal scroll at 1440px on 9 routes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "390px: bottom nav shown, top links hidden, network pill present",
+      "ok": true,
+      "detail": "{\"bottom\":\"grid\",\"links\":\"none\",\"pill\":\"Mezo testnet, chain id 31611\"}"
+    },
+    {
+      "name": "1440px: bottom nav hidden, Market is the active route (aria-current), pill says Mezo testnet 31611, footer lists the contracts",
+      "ok": true,
+      "detail": "{\"bottom\":\"none\",\"active\":[\"Market\"],\"pill\":\"Mezo testnet · 31611\",\"foot\":6,\"current\":\"Market\"}"
+    },
+    {
+      "name": "position #4 gauge: good zone, the distance is also written out, aria-label carries it",
+      "ok": true,
+      "detail": "15.0 points above the 120% rescue line."
+    },
+    {
+      "name": "position #5 gauge: bad zone, the distance is also written out, aria-label carries it",
+      "ok": true,
+      "detail": "5.0 points under the 110% liquidation line."
+    },
+    {
+      "name": "position #2 gauge: warn zone, the distance is also written out, aria-label carries it",
+      "ok": true,
+      "detail": "7.0 points above liquidation, 3.0 under the 120% rescue line."
+    },
+    {
+      "name": "position #4: debt split bar has three parts that add up to 100%, rows add up to the entire debt",
+      "ok": true,
+      "detail": "bar 97.2/1.6/1.2%, rows 1850 + 30 + 23 vs 1903"
+    },
+    {
+      "name": "a disabled action says why (Withdraw with no amount typed)",
+      "ok": true,
+      "detail": "Enter an amount above first."
+    },
+    {
+      "name": "list form fee preview renders as a receipt (price, fee, you receive) and keeps the sentence",
+      "ok": true,
+      "detail": "Price 50.00 MUSD Protocol fee (0.50%) −0.25 MUSD You receive 49.75 MUSD"
+    },
+    {
+      "name": "copy button confirms with a check mark and 'Copied'",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "failed write: shared status shows the 3 steps, a plain message (no raw selector), Retry and Dismiss, inside a live region",
+      "ok": true,
+      "detail": "! Confirm in wallet Pending Confirmed Missing or invalid parameters. Retry Dismiss"
+    },
+    {
+      "name": "Retry runs the write again (and it fails the same way here)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Dismiss removes the status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "market shows the listed position with a buyer receipt and the equity comparison",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "sort chip toggles aria-pressed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a filter that matches nothing shows an honest empty state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "clearing the filter brings the card back",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "auction card (simulated): floor, time left as a fixed-width clock, winner target ICR and the bid receipt",
+      "ok": true,
+      "detail": "TIME LEFT 05:35:00"
+    },
+    {
+      "name": "rescue page lists the at-risk position and offers Start rescue auction",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "auction price ticks down as time passes",
+      "ok": true,
+      "detail": "582.63 MUSD -> 582.61 MUSD"
+    },
+    {
+      "name": "My positions lists the three simulated Deeds the viewer holds",
+      "ok": true,
+      "detail": "3 cards"
+    },
+    {
+      "name": "tab order /: 18 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /positions: 23 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /market: 26 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /rescue: 23 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /activity: 38 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /start: 19 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /position/4: 28 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /position/5: 28 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "tab order /position/1: 19 stops, starts at the skip link, every stop shows a focus ring, no jump back up the page",
+      "ok": true,
+      "detail": "{\"first\":[\"Skip to content\",\"Deed, home\",\"Home\"],\"noRing\":[],\"jumps\":[]}"
+    },
+    {
+      "name": "reduced motion: no looping animation anywhere on the landing page, numbers and gauge are at their final values",
+      "ok": true,
+      "detail": "{\"loops\":0,\"stat\":\"9 | 3,226.73 MUSD | 6.69 MUSD | 2\",\"cls\":0.001182039220571845,\"dash\":{\"off\":49.0088,\"len\":245.04422698000386}}"
+    },
+    {
+      "name": "normal motion: the only looping animation is the slow backdrop drift (plus shimmer while loading)",
+      "ok": true,
+      "detail": "1 looping, stats 9 | 3,226.73 MUSD | 6.69 MUSD | 2"
+    },
+    {
+      "name": "layout shift on the landing page stays small (CLS under 0.1)",
+      "ok": true,
+      "detail": "reduced 0.001, normal 0.001"
+    },
+    {
+      "name": "layout shift on /market is under 0.1 after data loads",
+      "ok": true,
+      "detail": "0.000 "
+    },
+    {
+      "name": "layout shift on /position/4 is under 0.1 after data loads",
+      "ok": true,
+      "detail": "0.000 "
+    },
+    {
+      "name": "layout shift on /activity is under 0.1 after data loads",
+      "ok": true,
+      "detail": "0.000 "
+    }
+  ],
+  "notes": [
+    {
+      "focusOrder": {
+        "/": {
+          "stops": 18,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/positions": {
+          "stops": 23,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/market": {
+          "stops": 26,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/rescue": {
+          "stops": 23,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/activity": {
+          "stops": 38,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/start": {
+          "stops": 19,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/position/4": {
+          "stops": 28,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/position/5": {
+          "stops": 28,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        },
+        "/position/1": {
+          "stops": 19,
+          "first": [
+            "Skip to content",
+            "Deed, home",
+            "Home"
+          ],
+          "noRing": [],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "layoutShift": {
+        "landing_reduced": 0.001182039220571845,
+        "landing_normal": 0.001182039220571845
+      }
+    },
+    {
+      "layoutShift": {
+        "/market": 0,
+        "shifts": []
+      }
+    },
+    {
+      "layoutShift": {
+        "/position/4": 0.00033195087448559675,
+        "shifts": [
+          {
+            "v": 0,
+            "t": 3614,
+            "n": [
+              "b.",
+              "b."
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "layoutShift": {
+        "/activity": 0,
+        "shifts": []
+      }
+    }
+  ],
+  "consoleErrors": []
+}

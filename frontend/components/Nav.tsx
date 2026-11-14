@@ -89,7 +89,9 @@ export function Nav() {
       end={
         <>
           <NetworkPill />
-          <ConnectButton chainStatus="none" showBalance={false} accountStatus="address" />
+          <div className="wallet-btn">
+            <ConnectButton chainStatus="none" showBalance={false} accountStatus="address" />
+          </div>
         </>
       }
     />
