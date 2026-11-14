@@ -1,69 +1,69 @@
 DEED - WAVE 2 SUBMISSION (AKINDO)
 
 Project: Deed
+Track: DeFi: borrowing
 Network: Mezo testnet, chain id 31611
 Code: https://github.com/fourWayz/Deed
-Live app: https://frontend-iota-blush-70.vercel.app
+Indexer API: https://deed-lovat.vercel.app
+Live app: https://frontend-iota-blush-70.vercel.app (TODO: confirm whether it runs the v3 contracts. The frontend on the main branch is configured for the v2 contracts, the v3 frontend is on the feat/frontend-v2 branch.)
 Demo video: TODO
-Track: TODO (exact track name from the AKINDO listing)
 
 PROBLEM
 A Mezo MUSD loan is stuck to the wallet that opened it. You cannot sell a healthy position, and you cannot hand a risky one to someone who will rescue it. To leave, you repay and close.
 
 WHAT DEED DOES
-Deed puts each loan in its own vault and makes control of that vault an NFT, the Deed. Whoever holds the Deed is the only one who can add collateral, repay, withdraw or close through the vault. The position can be sold two ways: at a fixed price on a market, or through a rescue auction when it is close to liquidation.
+Deed puts each loan in its own vault and makes control of that vault an NFT, the Deed. Whoever holds the Deed is the only one who can add collateral, repay, borrow, refinance, withdraw, close or claim surplus through the vault. The position can be sold two ways: at a fixed price on a market, or through a rescue auction when it is close to liquidation.
 
-WHO IT IS FOR
-Borrowers who want out of a position without closing it, buyers who want an existing position, rescuers who want to take on a position near liquidation, and builders who want position data.
+TARGET USERS
+Borrowers who want to cash out of a healthy MUSD position without closing it, or exit a risky one for a fair price. Buyers who want an existing position instead of opening a new one. Rescuers who want to take over a position near liquidation, add BTC and keep the spread. Builders who want a position feed from the indexer API.
 
-WHAT IS LIVE TODAY (WAVE 1, DEPLOYED AND TESTED)
-Five contracts on Mezo testnet, all with an exact Sourcify match. The explorer source view is empty because the Mezo Blockscout verifier rejected every submission, including an unrelated control contract. Details: docs/verification.md in the repo.
+WHAT IS NEW IN WAVE 2 (DEPLOYED ON MEZO TESTNET, THIRD DEPLOYMENT)
+A fee of 0.5 percent on market sales and on rescue wins. The contracts cap it at 1 percent, it is fixed at deploy, and it goes to an immutable treasury. On testnet the treasury is the deployer wallet. A multisig is planned for mainnet.
+A one-hour time-weighted price guard. The testnet limit is 2000 bps (20 percent) because the testnet pool sits far from the oracle. The mainnet default is 200 bps.
+DeedLens, a read-only contract for position data and Recovery Mode status.
+Borrow, refinance and close with the entire debt through the vault.
+An indexer with a read-only API for positions, listings, auctions, activity and stats.
 
-DeedNFT
-https://explorer.test.mezo.org/address/0x848063cbD0230B6A4345311Ec090FDb51F49b681
-Source: https://repo.sourcify.dev/31611/0x848063cbD0230B6A4345311Ec090FDb51F49b681
+CONTRACTS (MEZO TESTNET, EXACT SOURCIFY MATCH FOR ALL SIX)
 
-DeedFactory
-https://explorer.test.mezo.org/address/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc
-Source: https://repo.sourcify.dev/31611/0x25ADc1306C9ad1529EC00b14ED353B4B198eB8Fc
+DeedNFT - the ERC-721. Whoever holds a Deed controls its vault.
+https://explorer.test.mezo.org/address/0x9C92E662cB7de018162E1d06F1f977f6A0B5547f
+Source: https://repo.sourcify.dev/31611/0x9C92E662cB7de018162E1d06F1f977f6A0B5547f
 
-DeedMarket
-https://explorer.test.mezo.org/address/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99
-Source: https://repo.sourcify.dev/31611/0x7e8a3d9624A4b69b5ADCD362028422b85eDF2e99
+DeedFactory - deploys a vault, mints the Deed and opens the trove in one transaction.
+https://explorer.test.mezo.org/address/0xb8602DBF0e5BBDE81C504C87F860fbbe7DF125CD
+Source: https://repo.sourcify.dev/31611/0xb8602DBF0e5BBDE81C504C87F860fbbe7DF125CD
 
-RescueAuction
-https://explorer.test.mezo.org/address/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9
-Source: https://repo.sourcify.dev/31611/0x190fB7559BB8023ecAA7c90CFcC17187042B89F9
+DeedMarket - fixed price sales with a buyer-protection snapshot, 0.5 percent fee.
+https://explorer.test.mezo.org/address/0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd
+Source: https://repo.sourcify.dev/31611/0x862e105bDE51B27c3B9670810c5B9Ea3b470Cbdd
 
-PairSpotPrice (DEX price guard, reads the live Tigris MUSD/BTC pool)
-https://explorer.test.mezo.org/address/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24
-Source: https://repo.sourcify.dev/31611/0xc8978277f2BCe7c06F9612d457c12B24F364Ec24
+RescueAuction - Dutch auction rescue for positions near liquidation, 0.5 percent fee.
+https://explorer.test.mezo.org/address/0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355
+Source: https://repo.sourcify.dev/31611/0xbF4Fe3aF0C5c138AE28230AF1Cb9b0C8cf2c8355
 
-These contracts have no fee, no owner, no pause and no upgrade path.
+DeedLens - read-only: a position's entire debt, ICR, equity, surplus and Recovery Mode status.
+https://explorer.test.mezo.org/address/0xDd628bBb4663549E0Af7815E93D14002D1f9Dde1
+Source: https://repo.sourcify.dev/31611/0xDd628bBb4663549E0Af7815E93D14002D1f9Dde1
+
+PairTwapPrice - one-hour time-weighted price guard over the live Tigris MUSD/BTC pool.
+https://explorer.test.mezo.org/address/0xda3e5a7785Ba49B87B5884dB7662e44Af31f4d00
+Source: https://repo.sourcify.dev/31611/0xda3e5a7785Ba49B87B5884dB7662e44Af31f4d00
 
 PROOF IT RUNS
-A live run with two wallets sent 31 transactions and passed on its first attempt. Every hash is in docs/demo.md and opens at https://explorer.test.mezo.org/tx/<hash>.
-Fixed price sale: 100 MUSD paid, 100 MUSD received, and a stale snapshot is rejected on chain with SnapshotMismatch.
-Rescue auction: a position at 116.99 percent ICR was rescued to 150.33 percent. The auction fell from 539.93 MUSD toward a floor of 431.95 MUSD (80 percent of equity). The winner paid 539.48 MUSD and added 0.008268 BTC in the same transaction.
-A browser pass of the production app passed 25 of 28, 13 of 14 and 14 of 14 checks across three runs. It found one real bug (the rescue form defaulted to a 50 percent floor against the new 80 percent minimum), which was fixed.
+The v3 run with three wallets is in docs/demo.md in the repo, with every transaction hash. Open any hash at https://explorer.test.mezo.org/tx/<hash>.
+Sale: 100 MUSD, seller received 99.5 and the treasury 0.5. Transaction: https://explorer.test.mezo.org/tx/0x483b9614a273e6a14f0ebb31b6bc4fce8b5ab498fa961efb38eb5c9c17da1f44
+Rescue: a position at 116.98 percent ICR was rescued to 150.70 percent. The winner paid 538.022 MUSD, split into 535.332 to the seller and 2.690 fee. Start: https://explorer.test.mezo.org/tx/0x54d55873d048d6cfc2410c402184a9b28f22b5b9f00fa5cbf28aae36cdd7cdbf Bid: https://explorer.test.mezo.org/tx/0x8d6d412367d36476f4a62b101b87fb1651e757b65c27e031a5a23be19a38b872
+The browser tests on v3 are in docs/ui-pass-v3.md, including what could not be tested.
 
-SAFETY RULES ENFORCED BY THE DEPLOYED CONTRACTS
-A stranger can start a rescue only below 120 percent ICR. Every auction floor is at least 80 percent of equity. The Mezo oracle sets every price and the DEX only acts as a guard. A listing or an auction freezes the vault for everyone. The contracts are not audited.
-
-WHAT IS NEW IN WAVE 2 (BUILT ON BRANCHES, NOT DEPLOYED, NOT CLAIMED AS LIVE)
-A capped fee on sales and rescues, paid to an immutable treasury. The cap is 1 percent in the contract and the rate cannot change after deploy. Fee value: TODO.
-A time-weighted DEX price guard and a read-only lens contract. TODO: tests and deployment.
-An indexer, a keeper bot, an SDK and MCP server, and a second frontend. TODO: nothing from these is running yet.
-Wave 2 contract addresses and explorer links: TODO, they will be added after the deployment transactions exist.
+TESTNET ACTIVITY FROM THE TEAM'S TEST WALLETS
+This is not usage and not revenue. Both wallets that touched the contracts are ours (2 unique wallets). Indexer stats for all deployments at the start of the 13 November 2026 test pass: 7 positions, 4 sales, 4 rescues, volume 3126.73 MUSD, fees 6.19 MUSD. The fees went to our own treasury wallet. We have no outside users yet.
 
 BUSINESS MODEL
-A small fee paid by the seller on a sale or a rescue win, capped and immutable so nobody has to trust an owner. A paid data API on top of the indexer is later revenue. Details: docs/business-model.md.
-
-USERS AND TRACTION
-TODO. There is no indexer data yet, so no user, volume or revenue figure is claimed.
+A small fee paid by the seller on a sale or a rescue win, capped at 1 percent in the contract and immutable, so nobody has to trust an owner. A paid data API on top of the indexer is later revenue and is not built. Details: docs/business-model.md.
 
 LIMITATIONS
-Not audited. The DEX deviation limit is 10 percent on testnet because the testnet pool sits about 3 percent under the oracle. Extension wallets, a WalletConnect session and the End auction button were not tested.
+Not audited. Three times on testnet a position that had just become the lowest-ICR trove was redeemed within a few blocks, before a rescue auction could run (hashes in the README and docs/security.md). We do not know who sent those redemptions. Redemption-queue-aware rescue is on the roadmap and not built. The testnet price guard limit is wide (20 percent). Extension wallets, a WalletConnect session and the End auction button were not tested. The keeper, SDK and MCP server are not part of this submission (TODO).
 
 HOW TO TRY IT
-Open https://frontend-iota-blush-70.vercel.app, connect a wallet on Mezo testnet with test BTC from https://faucet.test.mezo.org/, open a position, list it and buy it from a second wallet.
+Connect a wallet on Mezo testnet with test BTC from https://faucet.test.mezo.org/, open a position, list it and buy it from a second wallet. The steps and the transaction hashes of a full run are in docs/demo.md.
