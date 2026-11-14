@@ -7,7 +7,7 @@ import { deployed, FAUCET } from "@/lib/config";
 import { fmtBTC } from "@/lib/format";
 import { usePositions } from "@/lib/usePositions";
 import { CreatePosition, ListForm } from "@/components/Actions";
-import { ErrorBox, NotDeployed, Skeletons } from "@/components/ui";
+import { ErrorBox, NotDeployed } from "@/components/ui";
 
 // enough for the default 0.04 BTC position plus gas
 const NEEDED = parseEther("0.05");
@@ -72,7 +72,7 @@ export default function Start() {
           </Step>
 
           <Step n={2} title="Open a position" state={s2}>
-            {isLoading && <Skeletons n={1} />}
+            {isLoading && <div className="skeleton" aria-hidden="true" />}
             {error && <ErrorBox error={error} retry={() => refetch()} />}
             {data &&
               (hasPosition ? (
