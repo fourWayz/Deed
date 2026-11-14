@@ -4,7 +4,7 @@ import { useStats } from "@/lib/useStats";
 import { CURRENT_VERSION, deployed, EXPLORER } from "@/lib/config";
 import { fmtMUSD, short } from "@/lib/format";
 import type { Activity } from "@/lib/stats";
-import { ErrorBox, NotDeployed, Skeletons, Stat, StatsSource } from "@/components/ui";
+import { CopyButton, Empty, ErrorBox, NotDeployed, StripSkeleton, Stat, StatsSource } from "@/components/ui";
 
 const LABEL: Record<Activity["kind"], string> = {
   opened: "Position opened",
@@ -26,8 +26,8 @@ export default function ActivityPage() {
       {!deployed && <NotDeployed />}
       {isLoading && (
         <>
-          <Skeletons n={4} />
-          <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+          <StripSkeleton />
+          <div className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 8 }}>
             Reading events from the chain… {Math.round(progress * 100)}%
           </div>
         </>
@@ -44,14 +44,18 @@ export default function ActivityPage() {
               <Stat k="Fixed price sales" v={s.sales.toLocaleString()} />
               <Stat k="Rescues won" v={s.rescues.toLocaleString()} />
             </div>
-            <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+            <div className="muted" style={{ fontSize: "var(--fs-sm)", marginBottom: 6 }}>
               Volume is MUSD paid in sales and won auctions{isFetching ? ", refreshing…" : ""}.
             </div>
             <StatsSource s={s} indexerDown={s.indexerDown} />
           </div>
 
           <h2>Recent transactions</h2>
-          {s.recent.length === 0 && <div className="glass empty">Nothing has happened on these contracts yet.</div>}
+          {s.recent.length === 0 && (
+            <Empty art="activity" title="Quiet so far">
+              Nothing has happened on these contracts yet.
+            </Empty>
+          )}
           {s.recent.length > 0 && (
             <div className="glass feed">
               {s.recent.map((a) => (
@@ -59,15 +63,18 @@ export default function ActivityPage() {
                   <div>
                     <b>{LABEL[a.kind]}</b>
                     {a.version && a.version !== CURRENT_VERSION && <span className="pill" style={{ marginLeft: 8 }}>earlier deployment</span>}
-                    <div className="muted" style={{ fontSize: 12.5 }}>
+                    <div className="muted" style={{ fontSize: "var(--fs-sm)" }}>
                       Deed #{a.tokenId.toString()} · {a.wallets.map(short).join(" → ")}
                     </div>
                   </div>
                   <div className="feed-end">
                     {a.amount > 0n && <b>{fmtMUSD(a.amount)}</b>}
-                    <a className="mono" href={`${EXPLORER}/tx/${a.tx}`} target="_blank" rel="noreferrer">
-                      {short(a.tx)}
-                    </a>
+                    <span>
+                      <a className="mono" href={`${EXPLORER}/tx/${a.tx}`} target="_blank" rel="noreferrer">
+                        {short(a.tx)}
+                      </a>
+                      <CopyButton value={a.tx} label="transaction hash" />
+                    </span>
                   </div>
                 </div>
               ))}

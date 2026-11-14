@@ -49,7 +49,7 @@ export function RecoveryBanner({ system, canClose }: { system: SystemInfo | unde
 /** Small explanation shown under a button that Mezo's rules switched off. */
 export function BlockedNote({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+    <div className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 6 }}>
       {children ?? "Switched off while Mezo is in Recovery Mode."}
     </div>
   );

@@ -1,0 +1,202 @@
+{
+  "base": "http://localhost:3111",
+  "indexer": "https://deed-lovat.vercel.app",
+  "position": null,
+  "results": [
+    {
+      "name": "RPC down: Market shows a readable error with Retry",
+      "ok": true,
+      "detail": "Could not load positions: HTTP request failed. Retry"
+    },
+    {
+      "name": "route / at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route / at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /positions at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /positions at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /market at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /rescue at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /activity at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /activity at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /start at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /start at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 at desktop: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "route /position/1 at 390px: renders, no sideways scroll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing fee text shows the on-chain rates and the treasury",
+      "ok": true,
+      "detail": "Deed's fee: 0.50% of the sale price on a fixed price sale and 0.50% on a rescue auction, read from the contrac"
+    },
+    {
+      "name": "landing labels the stats as the team's test wallets",
+      "ok": true,
+      "detail": "Testnet activity from the team's test wallets."
+    },
+    {
+      "name": "landing labels the earlier deployment",
+      "ok": true,
+      "detail": "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees."
+    },
+    {
+      "name": "landing takes its totals from the indexer, no fallback notice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing shows when the indexer last synced",
+      "ok": true,
+      "detail": "Last synced 2 h ago."
+    },
+    {
+      "name": "empty wallet sees the empty state on Positions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "wizard, empty wallet: step 1 open with faucet link, steps 2 and 3 locked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a position closed by a redemption (surplus already claimed) says nothing to claim, button disabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a position held by someone else shows the connect-the-holder note, no actions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chain: redeemed position has no surplus left (it was claimed in the earlier run)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "open form blocks an under-collateralised position before sending anything",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "landing totals equal the indexer /stats (indexer behind the chain) (positions, volume, fees, wallets)",
+      "ok": true,
+      "detail": "ui 9 pos / 2 wallets / 3,226.73 MUSD / fees 6.69 MUSD; scan 9 / 2 / 3226.73 / 6.6876"
+    },
+    {
+      "name": "landing: indexer source, team-wallets label, last synced",
+      "ok": true,
+      "detail": "Last synced 3 h ago."
+    },
+    {
+      "name": "landing: a sync older than 30 minutes shows the 'indexer is behind' note, a fresh one does not",
+      "ok": true,
+      "detail": "last synced 2026-11-14T07:33:34.969Z, stale true"
+    },
+    {
+      "name": "landing: earlier deployment line matches an independent v2 scan",
+      "ok": true,
+      "detail": "Earlier deployment (v2): 3 positions, 1,889.22 MUSD volume, 0.00 MUSD fees."
+    },
+    {
+      "name": "activity totals equal the indexer /stats (indexer behind the chain) (positions, volume, fees, wallets, sales, rescues)",
+      "ok": true,
+      "detail": "{\"Positions opened\":\"9\",\"Volume\":\"3,226.73 MUSD\",\"Fees paid\":\"6.69 MUSD\",\"Unique wallets\":\"2\",\"Fixed price sales\":\"6\",\"Rescues won\":\"4\"}"
+    },
+    {
+      "name": "activity shows last synced from lastSyncedAt",
+      "ok": true,
+      "detail": "3 h ago (2026-11-14T07:33:34.969Z)"
+    },
+    {
+      "name": "activity carries the team-wallets label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "activity lists recent transactions with explorer links",
+      "ok": true,
+      "detail": "12 rows"
+    },
+    {
+      "name": "activity shows this run's sale and rescue with their amounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "indexer down: current deployment counted from chain, matches an independent scan",
+      "ok": true,
+      "detail": "ui 6 / 2 / 1,337.51 MUSD / 6.69 MUSD; chain 6 / 2 / 1337.51 / 6.6876"
+    },
+    {
+      "name": "indexer down: page says the indexer did not answer, keeps the team label, no last synced, no error box",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "txs": [],
+  "untested": [
+    "A claim that actually pays out surplus: surplus only exists after a third party's full redemption of a trove, which cannot be caused on demand. The claim path itself was exercised by the contracts session (docs/demo.md, Deed #3 of the v3 run, tx 0x3a672efe…57fa67). The UI shows 'Nothing to claim' for the redeemed and closed positions.",
+    "Indexer against scripts/chain-scan.mjs on the new positions: the indexer had not synced since 2026-11-14T07:33:34.969Z (at block 16771045/16771046, chain scan to 16773266), so the two could not be equal and the check was not run this time. The pages were compared with the indexer's own /stats instead. At block 16755791/16756229 the indexer and the scan were equal on every field (see docs/ui-pass-v3.md).",
+    "The 'team wallets' label going away: no wallet outside the team has used the contracts yet, so the branch that drops the label only has a unit test (lib/team.test.ts), not a browser run."
+  ],
+  "consoleErrors": [
+    "[empty] Failed to load resource: net::ERR_FAILED"
+  ],
+  "failed": 0
+}

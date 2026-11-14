@@ -20,6 +20,9 @@ const BASE = process.env.UI_BASE ?? "http://localhost:3111";
 const INDEXER = process.env.UI_INDEXER ?? "https://deed-lovat.vercel.app";
 const SHOTS = process.env.SHOT_DIR ?? "./shots";
 const FROM = Number(process.env.PHASE_FROM ?? 0);
+// PHASES=0,1,7 runs only those phases (the ones that send no transactions, for a regression check)
+const ONLY = process.env.PHASES ? process.env.PHASES.split(",").map(Number) : null;
+const want = (n) => (ONLY ? ONLY.includes(n) : FROM <= n);
 fs.mkdirSync(SHOTS, { recursive: true });
 const RPC = process.env.MEZO_TESTNET_RPC;
 const chain = { id: 31611, name: "Mezo Testnet", nativeCurrency: { name: "Bitcoin", symbol: "BTC", decimals: 18 }, rpcUrls: { default: { http: [RPC] } } };
@@ -249,7 +252,7 @@ async function main() {
   let r;
 
   // ---------- phase 0: routes, landing, activity, error and fallback states ----------
-  if (FROM <= 0) {
+  if (want(0)) {
     // the RPC-down check goes first, before the long run has loaded the machine
     const down = await session("empty");
     await down.route(RPC_GLOB, (route) => route.abort());
@@ -288,7 +291,7 @@ async function main() {
   }
 
   // ---------- phase 1: empty wallet ----------
-  if (FROM <= 1) {
+  if (want(1)) {
     await connect(empty);
     await empty.goto(BASE + "/positions", { waitUntil: "domcontentloaded" });
     await empty.getByText("No positions yet", { exact: false }).waitFor({ timeout: 90000 });
@@ -299,7 +302,7 @@ async function main() {
   }
 
   // ---------- phase 2: open through the wizard, then borrow and refinance ----------
-  if (FROM <= 2) {
+  if (want(2)) {
     await connect(alice);
     await alice.goto(BASE + "/start", { waitUntil: "domcontentloaded" });
     await alice.getByRole("heading", { name: "Open a position" }).first().waitFor({ timeout: 90000 });
@@ -354,7 +357,7 @@ async function main() {
   }
 
   // ---------- phase 3: list in the wizard with the default ICR, fee preview, bob buys ----------
-  if (FROM <= 3) {
+  if (want(3)) {
     await connect(alice);
     await alice.goto(BASE + "/start", { waitUntil: "domcontentloaded" });
     await alice.getByRole("button", { name: "List for sale", exact: true }).waitFor({ timeout: 90000 });
@@ -397,7 +400,7 @@ async function main() {
   }
 
   // ---------- phase 4: Recovery Mode (simulated) on the position bob now holds ----------
-  if (FROM <= 4) {
+  if (want(4)) {
     await connect(bob);
     for (const canClose of [false, true]) {
       const pg = await session("bob");
@@ -427,7 +430,7 @@ async function main() {
   }
 
   // ---------- phase 5: rescue. bob withdraws to under 120%, alice starts the rescue and bids ----------
-  if (FROM <= 5) {
+  if (want(5)) {
     await connect(bob);
     await bob.goto(BASE + `/position/${N}`, { waitUntil: "domcontentloaded" });
     await bob.getByRole("heading", { name: "Manage" }).waitFor({ timeout: 90000 });
@@ -488,7 +491,7 @@ async function main() {
   }
 
   // ---------- phase 6: close ----------
-  if (FROM <= 6) {
+  if (want(6)) {
     await connect(alice);
     const p = await lens(N);
     const need = p.debt - 200n * 10n ** 18n;
@@ -521,7 +524,7 @@ async function main() {
   }
 
   // ---------- phase 7: closed and redeemed positions from the earlier v3 run ----------
-  if (FROM <= 7) {
+  if (want(7)) {
     await connect(bob);
     await bob.goto(BASE + "/position/3", { waitUntil: "domcontentloaded" });
     await bob.getByRole("heading", { name: /Closed by a redemption/ }).waitFor({ timeout: 90000 });
@@ -538,7 +541,7 @@ async function main() {
   }
 
   // ---------- phase 8: errors read like sentences ----------
-  if (FROM <= 8) {
+  if (want(8)) {
     await connect(alice);
     await alice.goto(BASE + "/positions", { waitUntil: "domcontentloaded" });
     await alice.getByRole("heading", { name: "Open a position" }).waitFor({ timeout: 90000 });
@@ -551,7 +554,7 @@ async function main() {
   }
 
   // ---------- phase 9: stats from the indexer against scripts/chain-scan.mjs, then the fallback ----------
-  if (FROM <= 9) {
+  if (want(9)) {
     // the independent scan (raw getLogs, hand-sliced words, no shared code with the indexer or the app)
     const scan = () => JSON.parse(execFileSync("node", ["scripts/chain-scan.mjs"], { cwd: new URL("../indexer", import.meta.url).pathname, env: process.env, encoding: "utf8", maxBuffer: 1 << 20 }));
     const api = async () => (await fetch(`${INDEXER}/stats`)).json();

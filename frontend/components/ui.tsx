@@ -1,65 +1,92 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { animate, stagger } from "animejs";
+import { useEffect, useRef, useState } from "react";
+import { animate } from "animejs";
 import { EXPLORER } from "@/lib/config";
 import { cleanMessage, fmtMUSD } from "@/lib/format";
+import { reducedMotion } from "@/lib/motion";
 import type { TxState } from "@/lib/useTx";
+import { Art, ErrorArt, type ArtName } from "./Art";
 
-/** Fades children in with a small stagger when they first show up. */
+/** Children rise in one after another when the list first shows. Pure CSS, so nothing flashes before it animates. */
 export function Reveal({ children, className }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const items = Array.from(el.children);
-    if (items.length === 0) return;
-    items.forEach((c) => ((c as HTMLElement).style.opacity = "0"));
-    const a = animate(items, {
-      opacity: [0, 1],
-      translateY: [14, 0],
-      duration: 520,
-      delay: stagger(60),
-      ease: "outCubic",
-    });
-    return () => {
-      a.pause();
-      items.forEach((c) => ((c as HTMLElement).style.opacity = "1"));
-    };
-    // run once per mount, new cards appear without replaying the whole list
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return (
-    <div ref={ref} className={className}>
-      {children}
-    </div>
-  );
+  return <div className={`reveal${className ? ` ${className}` : ""}`}>{children}</div>;
 }
 
-/** Tweens a number on screen when its value changes. */
-export function Ticker({ value, format }: { value: number; format: (n: number) => string }) {
+/**
+ * Tweens a number on screen when its value changes. `from` makes the first render count up from that value (the stats
+ * strip uses 0). Under reduced motion it just shows the value. The last frame is always the exact formatted value.
+ */
+export function Ticker({ value, format, from, ms = 380 }: { value: number; format: (n: number) => string; from?: number; ms?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const last = useRef(value);
+  const last = useRef(from ?? value);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (reducedMotion() || last.current === value) {
+      el.textContent = format(value);
+      last.current = value;
+      return;
+    }
     const state = { v: last.current };
     const a = animate(state, {
       v: value,
-      duration: 700,
-      ease: "outExpo",
+      duration: ms,
+      ease: "outCubic",
       onUpdate: () => {
         el.textContent = format(state.v);
+      },
+      onComplete: () => {
+        el.textContent = format(value);
       },
     });
     last.current = value;
     return () => {
       a.pause();
+      el.textContent = format(value);
     };
     // format is a stable inline function in callers
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
-  return <span ref={ref}>{format(value)}</span>;
+  return <span ref={ref}>{format(from ?? value)}</span>;
+}
+
+/**
+ * Counts a bigint up to its value (from 0 the first time, from the previous value after that). The last frame is always
+ * the exact value, and with reduced motion there is no counting at all.
+ */
+export function CountUp({ value, format }: { value: bigint; format: (b: bigint) => string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const last = useRef<bigint | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const from = last.current ?? 0n;
+    last.current = value;
+    if (reducedMotion() || from === value) {
+      el.textContent = format(value);
+      return;
+    }
+    const st = { f: 0 };
+    const a = animate(st, {
+      f: 1,
+      duration: 380,
+      ease: "outCubic",
+      onUpdate: () => {
+        el.textContent = format(from + ((value - from) * BigInt(Math.round(st.f * 1e6))) / 1000000n);
+      },
+      onComplete: () => {
+        el.textContent = format(value);
+      },
+    });
+    return () => {
+      a.pause();
+      el.textContent = format(value);
+    };
+    // format is a stable function in callers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return <span ref={ref}>{format(0n)}</span>;
 }
 
 export function Stat({ k, v }: { k: string; v: React.ReactNode }) {
@@ -71,60 +98,167 @@ export function Stat({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-export function TxStatus({ state }: { state: TxState }) {
-  if (state.status === "wallet") return <div className="txline">Confirm in your wallet…</div>;
-  if (state.status === "pending")
-    return (
-      <div className="txline">
-        Waiting for confirmation…{" "}
-        <a href={`${EXPLORER}/tx/${state.hash}`} target="_blank" rel="noreferrer">
-          view
-        </a>
-      </div>
-    );
-  if (state.status === "done")
-    return (
-      <div className="txline ok">
-        Done.{" "}
-        <a href={`${EXPLORER}/tx/${state.hash}`} target="_blank" rel="noreferrer">
-          view transaction
-        </a>
-      </div>
-    );
-  if (state.status === "error") return <div className="txline err">{state.message}</div>;
-  return <div className="txline" />;
+const STEPS = ["Confirm in wallet", "Pending", "Confirmed"] as const;
+
+/**
+ * One status display for every write: three steps, the explorer link, a plain failure message with Retry, and it stays
+ * until it is dismissed. It only reads the TxState that useTx already keeps, nothing about sending changes.
+ */
+export function TxStatus({ state, onRetry }: { state: TxState; onRetry?: () => void }) {
+  const [hidden, setHidden] = useState<string | null>(null);
+  const key = state.status === "done" ? `done:${state.hash}` : state.status === "error" ? `err:${state.message}` : null;
+  useEffect(() => {
+    // a new attempt starts, so whatever was dismissed before does not apply any more
+    if (state.status === "wallet" || state.status === "pending") setHidden(null);
+  }, [state.status]);
+
+  if (state.status === "idle") return <div className="tx" role="status" aria-live="polite" />;
+  if (key !== null && hidden === key) return <div className="tx" role="status" aria-live="polite" />;
+
+  const at = state.status === "wallet" ? 0 : state.status === "pending" ? 1 : 2;
+  const steps = (
+    <ol className="tx-steps" aria-label="Transaction steps">
+      {STEPS.map((name, i) => {
+        const s = state.status === "error" ? (i === 0 ? "fail" : "todo") : state.status === "done" ? "done" : i < at ? "done" : i === at ? "now" : "todo";
+        return (
+          <li key={name} data-s={s}>
+            <span className="dot" aria-hidden="true">
+              {s === "done" ? "✓" : s === "fail" ? "!" : ""}
+            </span>
+            {name}
+          </li>
+        );
+      })}
+    </ol>
+  );
+  const link = (label: string) =>
+    "hash" in state ? (
+      <a href={`${EXPLORER}/tx/${state.hash}`} target="_blank" rel="noreferrer">
+        {label}
+      </a>
+    ) : null;
+
+  return (
+    <div className="tx" role="status" aria-live="polite">
+      {state.status === "wallet" && (
+        <div className="txline">
+          {steps}
+          <span className="tx-msg">Confirm in your wallet…</span>
+        </div>
+      )}
+      {state.status === "pending" && (
+        <div className="txline">
+          {steps}
+          <span className="tx-msg">Waiting for confirmation… {link("view")}</span>
+        </div>
+      )}
+      {state.status === "done" && (
+        <div className="txline ok">
+          {steps}
+          <span className="tx-msg">Done. {link("view transaction")}</span>
+          <div className="tx-actions">
+            <button type="button" className="btn ghost small" onClick={() => setHidden(key)}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+      {state.status === "error" && (
+        <div className="txline err" role="alert">
+          {steps}
+          <span className="tx-msg">{state.message}</span>
+          <div className="tx-actions">
+            {onRetry && (
+              <button type="button" className="btn small" onClick={onRetry}>
+                Retry
+              </button>
+            )}
+            <button type="button" className="btn ghost small" onClick={() => setHidden(key)}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
+const InfoIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+    <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M8 7v4M8 4.8v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+/** A write button with its status underneath. `why` is shown when the button is switched off, so it never just sits there grey. */
 export function TxButton({
   label,
   onClick,
   state,
   disabled,
   variant,
+  why,
 }: {
   label: string;
   onClick: () => void;
   state: TxState;
   disabled?: boolean;
   variant?: "ghost" | "danger";
+  why?: string;
 }) {
   const busy = state.status === "wallet" || state.status === "pending";
   return (
     <div>
       <button className={`btn ${variant ?? ""}`} onClick={onClick} disabled={disabled || busy}>
-        {busy && <span className="spinner" />}
+        {busy && <span className="spinner" aria-hidden="true" />}
         {busy ? (state.status === "wallet" ? "Confirm in wallet" : "Confirming") : label}
       </button>
-      <TxStatus state={state} />
+      {disabled && !busy && why && (
+        <div className="why">
+          <InfoIcon />
+          <span>{why}</span>
+        </div>
+      )}
+      <TxStatus state={state} onRetry={onClick} />
+    </div>
+  );
+}
+
+/** A card-shaped placeholder: same size as a position card so the grid does not move when real cards arrive. */
+function CardSkeleton() {
+  return (
+    <div className="card-skel" aria-hidden="true">
+      <div className="skeleton-line h" />
+      <div className="skeleton-line" style={{ width: "30%" }} />
+      <div className="sgrid">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="skeleton-line" />
+        ))}
+      </div>
+      <div className="skeleton-line btn" />
     </div>
   );
 }
 
 export function Skeletons({ n = 3 }: { n?: number }) {
   return (
-    <div className="grid">
+    <div className="grid" role="status" aria-label="Loading">
       {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className="skeleton" />
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+/** A row of small placeholders for a stats strip. */
+export function StripSkeleton() {
+  return (
+    <div className="strip" role="status" aria-label="Loading numbers">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="strip-cell">
+          <div className="skeleton-line" style={{ width: "60%", height: 12 }} />
+          <div className="skeleton-line" style={{ width: "80%", height: 28, marginTop: 10 }} />
+        </div>
       ))}
     </div>
   );
@@ -133,11 +267,27 @@ export function Skeletons({ n = 3 }: { n?: number }) {
 export function ErrorBox({ error, retry, what = "positions" }: { error: unknown; retry: () => void; what?: string }) {
   const msg = cleanMessage((error as { shortMessage?: string; message?: string })?.shortMessage ?? (error as Error)?.message);
   return (
-    <div className="notice err" role="alert">
-      Could not load {what}: {msg}{" "}
-      <button className="btn ghost" style={{ marginLeft: 10, padding: "6px 12px" }} onClick={retry}>
-        Retry
-      </button>
+    <div className="notice err err-state" role="alert">
+      <ErrorArt />
+      <div>
+        Could not load {what}: {msg}
+        <div>
+          <button className="btn ghost small" onClick={retry}>
+            Retry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Empty state: a small picture, a short title and one plain sentence. */
+export function Empty({ art, title, children }: { art: ArtName; title?: string; children: React.ReactNode }) {
+  return (
+    <div className="glass empty">
+      <Art name={art} />
+      {title && <div className="empty-title">{title}</div>}
+      <p>{children}</p>
     </div>
   );
 }
@@ -148,6 +298,52 @@ export function NotDeployed() {
       Deed contract addresses are not configured. Copy <span className="mono">frontend/.env.example</span> to{" "}
       <span className="mono">.env.local</span> and fill in the deployed addresses.
     </div>
+  );
+}
+
+/** Copies `value` to the clipboard and says so for a moment. `label` names what is copied, for screen readers. */
+export function CopyButton({ value, label }: { value: string; label: string }) {
+  const [done, setDone] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // clipboard api is missing on plain http and in some webviews
+      const t = document.createElement("textarea");
+      t.value = value;
+      t.style.position = "fixed";
+      t.style.opacity = "0";
+      document.body.appendChild(t);
+      t.select();
+      try {
+        document.execCommand("copy");
+      } catch {
+        /* nothing more to try */
+      }
+      document.body.removeChild(t);
+    }
+    setDone(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setDone(false), 1600);
+  };
+  return (
+    <>
+      <button type="button" className={`copy${done ? " copied" : ""}`} onClick={copy} aria-label={`Copy ${label}`} title={`Copy ${label}`}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {done ? <path d="M3 8.5l3.2 3.2L13 4.8" /> : <><rect x="5.5" y="5.5" width="8" height="8" rx="2" /><path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" /></>}
+        </svg>
+      </button>
+      <span className="sr-only" role="status" aria-live="polite">
+        {done ? `${label} copied` : ""}
+      </span>
+      {done && (
+        <span className="copy-note" aria-hidden="true">
+          Copied
+        </span>
+      )}
+    </>
   );
 }
 
@@ -162,7 +358,7 @@ function ago(iso: string): string {
 
 export function StatsSource({ s, indexerDown }: { s: import("@/lib/stats").Stats; indexerDown: boolean }) {
   return (
-    <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+    <div className="muted" style={{ fontSize: "var(--fs-sm)", lineHeight: 1.6 }}>
       {/* testnet only, and so far only the team has used it. The wording stays until another wallet shows up. */}
       <div data-testid="stats-label">
         {s.outsideWallets ? "Testnet activity." : "Testnet activity from the team's test wallets."}
@@ -181,7 +377,7 @@ export function StatsSource({ s, indexerDown }: { s: import("@/lib/stats").Stats
           )}
           {/* a stalled sync makes every total too low, so say it instead of leaving the age to be noticed */}
           {s.lastSyncedAt && Date.now() - new Date(s.lastSyncedAt).getTime() > 30 * 60_000 && (
-            <div data-testid="indexer-behind" style={{ marginTop: 4, color: "var(--warn, #b45309)" }}>
+            <div data-testid="indexer-behind" style={{ marginTop: 4, color: "var(--warn-ink)", fontWeight: 600 }}>
               The indexer is behind, so the newest activity is not in these totals yet.
             </div>
           )}

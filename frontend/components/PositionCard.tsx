@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { fmtBTC, fmtMUSD, fmtPct, fmtRate, short } from "@/lib/format";
 import type { Position } from "@/lib/positions";
-import { Stat } from "./ui";
+import { CopyButton, Stat } from "./ui";
 
 export function icrTone(icr: bigint | null, rescueICR: bigint): "good" | "warn" | "bad" {
   if (icr === null) return "warn";
@@ -23,24 +23,28 @@ export function PositionCard({
   p,
   rescueICR,
   href,
+  flat,
   children,
 }: {
   p: Position;
   rescueICR: bigint;
   href?: string;
+  // no hover lift, for a card that is not a link target (the position page's own header)
+  flat?: boolean;
   children?: React.ReactNode;
 }) {
   const tone = icrTone(p.icr, rescueICR);
   return (
-    <div className="glass">
+    <div className={`glass${flat ? "" : " card"}`}>
       <div className="row">
-        <Link href={href ?? `/position/${p.id}`} style={{ fontWeight: 700, fontSize: 17 }}>
+        <Link href={href ?? `/position/${p.id}`} style={{ fontWeight: 800, fontSize: "var(--fs-md)", fontFamily: "var(--font-heading)" }}>
           Deed #{p.id.toString()}
         </Link>
         <StatusPill p={p} />
       </div>
       <div className="muted mono" style={{ marginTop: 4 }}>
         owner {short(p.owner)}
+        <CopyButton value={p.owner} label="owner address" />
       </div>
       <div className="stats">
         <Stat k="Collateral" v={fmtBTC(p.collateral)} />
